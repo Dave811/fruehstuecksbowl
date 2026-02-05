@@ -68,7 +68,7 @@ export default function DatePicker({ value, onChange, id, placeholder = 'Datum w
       <button
         type="button"
         id={id}
-        className="w-full min-h-touch px-4 py-3 text-base border border-stone-200 rounded-xl bg-white text-stone-900 cursor-pointer text-left hover:border-primary"
+        className="w-full min-h-touch px-4 py-3 text-base border border-input rounded-xl bg-card text-card-foreground cursor-pointer text-left hover:border-primary"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -76,7 +76,7 @@ export default function DatePicker({ value, onChange, id, placeholder = 'Datum w
         {value ? new Date(value + 'T12:00:00').toLocaleDateString('de-DE') : placeholder}
       </button>
       {open && (
-        <div className="date-picker-dropdown absolute top-full left-0 z-[100] mt-1 bg-white rounded-xl shadow-lg p-2 border border-stone-100">
+        <div className="date-picker-dropdown absolute top-full left-0 z-[100] mt-1 bg-popover rounded-xl shadow-lg p-2 border border-border">
           <DayPicker
             mode="single"
             selected={selected}

@@ -53,7 +53,9 @@ function AdminGate({ children }: { children: React.ReactNode }) {
               className="min-h-[48px]"
             />
           </div>
-          <Button type="submit" className="min-h-[48px]">Anmelden</Button>
+          <Button type="submit" variant="default" className="min-h-[48px]">
+            Anmelden
+          </Button>
         </form>
       </CardContent>
     </Card>
@@ -83,7 +85,7 @@ export default function AdminPage() {
                 <NavigationMenuLink asChild>
                   <button
                     type="button"
-                    className={navigationMenuTriggerStyle() + ' min-h-[44px] data-[active=true]:bg-card data-[active=true]:text-card-foreground data-[active=true]:shadow-sm'}
+                    className={navigationMenuTriggerStyle() + ' min-h-[44px] data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm data-[active=true]:hover:bg-primary-hover data-[active=true]:hover:text-primary-foreground data-[active=true]:focus:bg-primary data-[active=true]:focus:text-primary-foreground'}
                     data-active={active === id}
                     onClick={() => setActive(id)}
                   >

@@ -112,7 +112,12 @@ export default function OrderPage() {
     return (
       <div>
         <p className="text-muted-foreground text-sm mb-2">Eingeloggt als <strong className="text-foreground">{customer.name}</strong></p>
-        <Button type="button" variant="outline" className="print:hidden mb-4 min-h-[48px]" onClick={handleLogout}>
+        <Button
+          type="button"
+          variant="outline"
+          className="print:hidden mb-4 min-h-[48px] border-muted-foreground/40 text-muted-foreground hover:bg-muted hover:text-foreground hover:border-muted-foreground/60"
+          onClick={handleLogout}
+        >
           Anderer Nutzer / Abmelden
         </Button>
         <div className="print:hidden mb-4 space-y-2">

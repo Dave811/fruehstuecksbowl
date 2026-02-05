@@ -185,7 +185,7 @@ export default function OrderForm({ customerId, deliveryDate, onSaved }: OrderFo
               <div className="flex flex-wrap items-center gap-2">
                 {ings.map(ing => (
                   <div key={ing.id} className="flex items-center gap-2 mb-2">
-                    <span className="text-stone-700">{ing.name}:</span>
+                    <span className="text-foreground">{ing.name}:</span>
                     {(layer.quantity_options as string).split(',').map(s => {
                       const n = parseInt(s.trim(), 10)
                       if (isNaN(n)) return null

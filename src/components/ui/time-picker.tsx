@@ -71,8 +71,8 @@ export function TimePicker({ hour, minute, onChange, id, className }: TimePicker
                   data-hour={value}
                   className={cn(
                     "w-full min-h-[36px] text-center text-sm tabular-nums transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+                    "bg-background hover:bg-accent hover:text-accent-foreground",
+                    isSelected && "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground"
                   )}
                   onClick={() => onChange(value, selectedMinute ?? minute)}
                 >
@@ -98,8 +98,8 @@ export function TimePicker({ hour, minute, onChange, id, className }: TimePicker
                   data-minute={value}
                   className={cn(
                     "w-full min-h-[36px] text-center text-sm tabular-nums transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+                    "bg-background hover:bg-accent hover:text-accent-foreground",
+                    isSelected && "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground"
                   )}
                   onClick={() => onChange(hour, value)}
                 >
