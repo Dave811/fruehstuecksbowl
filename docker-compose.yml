@@ -1,5 +1,6 @@
 services:
   bestellen:
+    env_file: .env
     build:
       context: .
       dockerfile: Dockerfile
@@ -7,6 +8,8 @@ services:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
         VITE_ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD}
+    environment:
+      ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.bestellen.rule=Host(`bestellen.hasshoff.net`)"
