@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
-import { getNextMonday } from '../../utils/dateUtils'
-import type { Ingredient } from '../../types'
+import { supabase } from '@/lib/supabase'
+import { getNextMonday } from '@/utils/dateUtils'
+import type { Ingredient } from '@/types'
+import DatePicker from '@/components/DatePicker'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 
 type OrderItemRow = { ingredient_id: string; quantity: number }
 type Agg = { count: number; ingredient: Ingredient }
@@ -55,34 +59,34 @@ export default function ShoppingListTab() {
     return { count, portion, unit, total, packages: null, pkgLabel: null, name: ingredient.name }
   })
 
-  function printList() {
-    window.print()
-  }
-
-  if (loading) return <p>Lade …</p>
+  if (loading) return <p className="text-muted-foreground">Lade …</p>
 
   return (
-    <div className="card">
-      <h2>Einkaufsliste</h2>
-      <p className="muted">Für den gewählten Liefermontag. Drucken mit Browser-Druck (Strg+P).</p>
-      <div className="form-group no-print">
-        <label>Lieferdatum (Montag)</label>
-        <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
-      </div>
-      <button type="button" className="btn no-print" onClick={printList} style={{ marginBottom: '1rem' }}>
-        Drucken
-      </button>
-      <ul className="shopping-list">
-        {lines.map((line, idx) => (
-          <li key={idx}>
-            {line.count}× {line.portion}{line.unit} {line.name}
-            {line.packages != null && line.pkgLabel && (
-              <> → <strong>{line.packages}× {line.pkgLabel}</strong></>
-            )}
-          </li>
-        ))}
-      </ul>
-      {lines.length === 0 && <p className="muted">Keine Bestellungen für diesen Tag.</p>}
-    </div>
+    <Card className="mb-4">
+      <CardHeader>
+        <CardTitle>Einkaufsliste</CardTitle>
+        <p className="text-muted-foreground text-sm font-normal">Für den gewählten Liefermontag. Drucken mit Browser-Druck (Strg+P).</p>
+        <div className="space-y-2 print:hidden">
+          <Label>Lieferdatum (Montag)</Label>
+          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Montag wählen" />
+        </div>
+        <Button type="button" className="print:hidden min-h-[48px] mb-4" onClick={() => window.print()}>
+          Drucken
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <ul className="list-disc pl-5 space-y-1">
+          {lines.map((line, idx) => (
+            <li key={idx}>
+              {line.count}× {line.portion}{line.unit} {line.name}
+              {line.packages != null && line.pkgLabel && (
+                <> → <strong>{line.packages}× {line.pkgLabel}</strong></>
+              )}
+            </li>
+          ))}
+        </ul>
+        {lines.length === 0 && <p className="text-muted-foreground text-sm">Keine Bestellungen für diesen Tag.</p>}
+      </CardContent>
+    </Card>
   )
 }

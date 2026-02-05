@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
-import type { Ingredient, Layer } from '../../types'
+import { supabase } from '@/lib/supabase'
+import type { Ingredient, Layer } from '@/types'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
+
+const selectClass = 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[48px]'
 
 export default function IngredientsTab() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
@@ -18,9 +25,7 @@ export default function IngredientsTab() {
     package_label: '',
   })
 
-  useEffect(() => {
-    load()
-  }, [])
+  useEffect(() => { load() }, [])
 
   async function load() {
     const [ingRes, layRes] = await Promise.all([
@@ -74,65 +79,71 @@ export default function IngredientsTab() {
     })
   }
 
-  if (loading) return <p>Lade …</p>
+  if (loading) return <p className="text-muted-foreground">Lade …</p>
 
   return (
-    <div className="card">
-      <h2>Zutaten</h2>
-      <form onSubmit={e => { e.preventDefault(); save(); }}>
-        <div className="form-group">
-          <label>Name</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="z. B. Skir" required />
-        </div>
-        <div className="form-group">
-          <label>Ebene</label>
-          <select value={form.layer_id} onChange={e => setForm(f => ({ ...f, layer_id: e.target.value }))} required>
-            <option value="">— wählen —</option>
-            {layers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Reihenfolge</label>
-          <input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value, 10) || 0 }))} />
-        </div>
-        <details>
-          <summary>Einkaufsliste (Portion / Packung)</summary>
-          <div className="form-group">
-            <label>Portion (Menge)</label>
-            <input type="number" value={form.portion_amount} onChange={e => setForm(f => ({ ...f, portion_amount: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="100" />
+    <Card className="mb-4">
+      <CardHeader>
+        <CardTitle>Zutaten</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <form onSubmit={e => { e.preventDefault(); save(); }} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Name</Label>
+            <Input className="min-h-[48px]" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="z. B. Skir" required />
           </div>
-          <div className="form-group">
-            <label>Portion (Einheit)</label>
-            <input value={form.portion_unit} onChange={e => setForm(f => ({ ...f, portion_unit: e.target.value }))} placeholder="g" />
+          <div className="space-y-2">
+            <Label>Ebene</Label>
+            <select className={cn(selectClass)} value={form.layer_id} onChange={e => setForm(f => ({ ...f, layer_id: e.target.value }))} required>
+              <option value="">— wählen —</option>
+              {layers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
           </div>
-          <div className="form-group">
-            <label>Packung (Menge)</label>
-            <input type="number" value={form.package_amount} onChange={e => setForm(f => ({ ...f, package_amount: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="500" />
+          <div className="space-y-2">
+            <Label>Reihenfolge</Label>
+            <Input type="number" className="min-h-[48px]" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value, 10) || 0 }))} />
           </div>
-          <div className="form-group">
-            <label>Packung (Bezeichnung)</label>
-            <input value={form.package_label} onChange={e => setForm(f => ({ ...f, package_label: e.target.value }))} placeholder="500g Becher" />
+          <details className="space-y-4">
+            <summary className="cursor-pointer font-medium text-muted-foreground">Einkaufsliste (Portion / Packung)</summary>
+            <div className="mt-2 space-y-4 pl-2">
+              <div className="space-y-2">
+                <Label>Portion (Menge)</Label>
+                <Input type="number" className="min-h-[48px]" value={form.portion_amount} onChange={e => setForm(f => ({ ...f, portion_amount: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="100" />
+              </div>
+              <div className="space-y-2">
+                <Label>Portion (Einheit)</Label>
+                <Input className="min-h-[48px]" value={form.portion_unit} onChange={e => setForm(f => ({ ...f, portion_unit: e.target.value }))} placeholder="g" />
+              </div>
+              <div className="space-y-2">
+                <Label>Packung (Menge)</Label>
+                <Input type="number" className="min-h-[48px]" value={form.package_amount} onChange={e => setForm(f => ({ ...f, package_amount: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="500" />
+              </div>
+              <div className="space-y-2">
+                <Label>Packung (Bezeichnung)</Label>
+                <Input className="min-h-[48px]" value={form.package_label} onChange={e => setForm(f => ({ ...f, package_label: e.target.value }))} placeholder="500g Becher" />
+              </div>
+            </div>
+          </details>
+          <div className="flex gap-2">
+            <Button type="submit" className="min-h-[48px]">{editing ? 'Speichern' : 'Hinzufügen'}</Button>
+            {editing && <Button type="button" variant="outline" onClick={() => { setEditing(null); setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '' }); }}>Abbrechen</Button>}
           </div>
-        </details>
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-          <button type="submit" className="btn">{editing ? 'Speichern' : 'Hinzufügen'}</button>
-          {editing && <button type="button" className="btn btn-secondary" onClick={() => { setEditing(null); setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '' }); }}>Abbrechen</button>}
-        </div>
-      </form>
-      <ul style={{ listStyle: 'none', padding: 0, marginTop: '1rem' }}>
-        {ingredients.map(i => {
-          const layerName = layers.find(l => l.id === i.layer_id)?.name ?? '?'
-          return (
-            <li key={i.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--border)' }}>
-              <span><strong>{i.name}</strong> ({layerName}) {i.portion_amount != null && <small>{i.portion_amount}{i.portion_unit} → {i.package_amount}{i.package_unit ?? ''} {i.package_label}</small>}</span>
-              <span>
-                <button type="button" className="btn btn-secondary" style={{ marginRight: '0.5rem', padding: '0.4rem 0.8rem' }} onClick={() => startEdit(i)}>Bearbeiten</button>
-                <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem' }} onClick={() => remove(i.id)}>Löschen</button>
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
+        </form>
+        <ul className="list-none p-0 border-t border-border pt-4 space-y-2">
+          {ingredients.map(i => {
+            const layerName = layers.find(l => l.id === i.layer_id)?.name ?? '?'
+            return (
+              <li key={i.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                <span className="text-foreground"><strong>{i.name}</strong> ({layerName}) {i.portion_amount != null && <small className="text-muted-foreground">{i.portion_amount}{i.portion_unit} → {i.package_amount}{i.package_unit ?? ''} {i.package_label}</small>}</span>
+                <span className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => startEdit(i)}>Bearbeiten</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => remove(i.id)}>Löschen</Button>
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      </CardContent>
+    </Card>
   )
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import type { Order, OrderItem, Ingredient, Layer } from '../types'
-import { formatDate } from '../utils/dateUtils'
+import { supabase } from '@/lib/supabase'
+import type { Order, OrderItem, Ingredient, Layer } from '@/types'
+import { formatDate } from '@/utils/dateUtils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface OrderWithItems extends Order {
   order_items?: (OrderItem & { ingredients?: (Ingredient & { layers?: Layer | null }) | null })[]
@@ -33,7 +34,7 @@ export default function MyOrder({ customerId, deliveryDate }: MyOrderProps) {
     load()
   }, [customerId, deliveryDate])
 
-  if (loading) return <p className="muted">Lade Bestellung …</p>
+  if (loading) return <p className="text-muted-foreground text-sm">Lade Bestellung …</p>
   if (!order || !order.order_items?.length) return null
 
   const byLayer: Record<string, { name: string; sort_order: number; items: { name: string; quantity: number }[] }> = {}
@@ -50,17 +51,21 @@ export default function MyOrder({ customerId, deliveryDate }: MyOrderProps) {
   const sorted = Object.entries(byLayer).sort((a, b) => a[1].sort_order - b[1].sort_order)
 
   return (
-    <div className="card">
-      <h2>Meine Bestellung</h2>
-      <p className="muted">{formatDate(deliveryDate)}</p>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {sorted.map(([, g]) => (
-          <li key={g.name} style={{ marginBottom: '0.5rem' }}>
-            <strong>{g.name}:</strong>{' '}
-            {g.items.map(i => (i.quantity > 1 ? `${i.name} (${i.quantity})` : i.name)).join(', ')}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <CardTitle>Meine Bestellung</CardTitle>
+        <p className="text-muted-foreground text-sm">{formatDate(deliveryDate)}</p>
+      </CardHeader>
+      <CardContent>
+        <ul className="list-none p-0 m-0 space-y-2">
+          {sorted.map(([, g]) => (
+            <li key={g.name}>
+              <strong>{g.name}:</strong>{' '}
+              {g.items.map(i => (i.quantity > 1 ? `${i.name} (${i.quantity})` : i.name)).join(', ')}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   )
 }

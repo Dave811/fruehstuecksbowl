@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
-import { getNextMonday } from '../../utils/dateUtils'
-import { formatDate } from '../../utils/dateUtils'
+import { supabase } from '@/lib/supabase'
+import { getNextMonday } from '@/utils/dateUtils'
+import { formatDate } from '@/utils/dateUtils'
+import DatePicker from '@/components/DatePicker'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 
 type OrderForSlip = {
   id: string
@@ -46,32 +50,39 @@ export default function OrderSlipsTab() {
     return Object.entries(map).sort((a, b) => a[1].sort_order - b[1].sort_order)
   }
 
-  if (loading) return <p>Lade …</p>
+  if (loading) return <p className="text-muted-foreground">Lade …</p>
 
   return (
-    <div className="card">
-      <h2>Bestellzettel</h2>
-      <p className="muted">Mehrere Zettel pro A4-Seite. Drucken mit Browser-Druck (Strg+P).</p>
-      <div className="form-group no-print">
-        <label>Lieferdatum (Montag)</label>
-        <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
-      </div>
-      <button type="button" className="btn no-print" onClick={printSlips} style={{ marginBottom: '1rem' }}>
-        Drucken
-      </button>
-      <div className="slips-print">
-        {orders.map(o => (
-          <div key={o.id} className="slip-card">
-            <div className="slip-name">{o.customers?.name ?? '?'}</div>
-            <div className="slip-date">{formatDate(o.delivery_date)}</div>
-            <ul className="slip-list">
-              {byLayer(o).map(([layerName, { items }]) => (
-                <li key={layerName}><strong>{layerName}:</strong> {items.join(', ')}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Card className="mb-4">
+      <CardHeader>
+        <CardTitle>Bestellzettel</CardTitle>
+        <p className="text-muted-foreground text-sm font-normal">Mehrere Zettel pro A4-Seite. Drucken mit Browser-Druck (Strg+P).</p>
+        <div className="space-y-2 print:hidden">
+          <Label>Lieferdatum (Montag)</Label>
+          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Montag wählen" />
+        </div>
+        <Button type="button" className="print:hidden min-h-[48px] mb-4" onClick={printSlips}>
+          Drucken
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4 print:gap-3">
+          {orders.map(o => (
+            <div
+              key={o.id}
+              className="border border-border rounded-xl p-4 break-inside-avoid print:border-black print:p-2 print:text-sm"
+            >
+              <div className="font-bold text-lg text-foreground">{o.customers?.name ?? '?'}</div>
+              <div className="text-muted-foreground text-sm mb-2">{formatDate(o.delivery_date)}</div>
+              <ul className="m-0 pl-5 list-disc">
+                {byLayer(o).map(([layerName, { items }]) => (
+                  <li key={layerName}><strong>{layerName}:</strong> {items.join(', ')}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

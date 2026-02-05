@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import type { Layer, Ingredient } from '../types'
-import { getNextMonday } from '../utils/dateUtils'
-import { isOrderClosedForDelivery } from '../utils/dateUtils'
+import { supabase } from '@/lib/supabase'
+import type { Layer, Ingredient } from '@/types'
+import { getNextMonday } from '@/utils/dateUtils'
+import { isOrderClosedForDelivery } from '@/utils/dateUtils'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 
 type SelectionState = Record<string, string[]>
-/** layerId -> ingredientId -> quantity */
 type QuantityState = Record<string, Record<string, number>>
 
 interface OrderFormProps {
@@ -17,11 +19,11 @@ interface OrderFormProps {
 export default function OrderForm({ customerId, deliveryDate, onSaved }: OrderFormProps) {
   const [layers, setLayers] = useState<Layer[]>([])
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
-  const [cutoff, setCutoff] = useState({ weekday: 4, hour: 16, minute: 0 })
+  const [cutoff, setCutoff] = useState({ weekday: 3, hour: 16, minute: 0 })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [selection, setSelection] = useState<SelectionState>({})
-  const [quantity, setQuantity] = useState<QuantityState>({}) // layerId -> { ingredientId: qty }
+  const [quantity, setQuantity] = useState<QuantityState>({})
 
   useEffect(() => {
     async function load() {
@@ -36,7 +38,7 @@ export default function OrderForm({ customerId, deliveryDate, onSaved }: OrderFo
         const m: Record<string, number> = {}
         for (const { key, value } of setRes.data) {
           const v = parseInt(value ?? '', 10)
-          if (key === 'order_cutoff_weekday') m.weekday = isNaN(v) ? 4 : v
+          if (key === 'order_cutoff_weekday') m.weekday = isNaN(v) ? 3 : v
           if (key === 'order_cutoff_hour') m.hour = isNaN(v) ? 16 : v
           if (key === 'order_cutoff_minute') m.minute = isNaN(v) ? 0 : v
         }
@@ -76,10 +78,8 @@ export default function OrderForm({ customerId, deliveryDate, onSaved }: OrderFo
   }, [customerId, deliveryDate, ingredients.length, layers.length])
 
   const closed = isOrderClosedForDelivery(deliveryDate, cutoff.weekday, cutoff.hour, cutoff.minute)
-
   const layersFiltered = layers.filter(l => l.selection_type !== 'none')
-  const getIngredientsForLayer = (layerId: string) =>
-    ingredients.filter(i => i.layer_id === layerId)
+  const getIngredientsForLayer = (layerId: string) => ingredients.filter(i => i.layer_id === layerId)
 
   function setLayerSelection(layerId: string, type: string, value: string | string[] | number | [string, number]) {
     if (type === 'single') {
@@ -95,10 +95,7 @@ export default function OrderForm({ customerId, deliveryDate, onSaved }: OrderFo
       })
     } else if (type === 'quantity') {
       const [ingId, q] = value as [string, number]
-      setQuantity(qty => ({
-        ...qty,
-        [layerId]: { ...(qty[layerId] ?? {}), [ingId]: q },
-      }))
+      setQuantity(qty => ({ ...qty, [layerId]: { ...(qty[layerId] ?? {}), [ingId]: q } }))
     }
   }
 
@@ -121,8 +118,7 @@ export default function OrderForm({ customerId, deliveryDate, onSaved }: OrderFo
     for (const layer of layersFiltered) {
       const ings = getIngredientsForLayer(layer.id)
       if (layer.selection_type === 'single' || layer.selection_type === 'multiple') {
-        const ids = selection[layer.id] ?? []
-        for (const id of ids) items.push({ order_id: orderId, ingredient_id: id, quantity: 1 })
+        for (const id of selection[layer.id] ?? []) items.push({ order_id: orderId, ingredient_id: id, quantity: 1 })
       } else if (layer.selection_type === 'quantity') {
         const qMap = quantity[layer.id] ?? {}
         for (const ing of ings) {
@@ -136,59 +132,77 @@ export default function OrderForm({ customerId, deliveryDate, onSaved }: OrderFo
     onSaved?.()
   }
 
-  if (loading) return <p>Wird geladen …</p>
+  if (loading) return <p className="text-muted-foreground">Wird geladen …</p>
   if (closed) {
     return (
-      <div className="card">
-        <h2>Bestellschluss vorbei</h2>
-        <p className="muted">Für den nächsten Liefertermin können keine Bestellungen mehr aufgegeben werden.</p>
-      </div>
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Bestellschluss vorbei</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">Für den nächsten Liefertermin können keine Bestellungen mehr aufgegeben werden.</p>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card">
-      <h2>Deine Bowl für {new Date(deliveryDate + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+    <Card className="mb-4">
+      <form onSubmit={handleSubmit}>
+        <CardHeader>
+          <CardTitle>
+            Deine Bowl für {new Date(deliveryDate + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
       {layersFiltered.map(layer => {
         const ings = getIngredientsForLayer(layer.id)
         if (!ings.length) return null
         return (
-          <div key={layer.id} className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label>{layer.name}</label>
+          <div key={layer.id} className="space-y-2">
+            <Label>{layer.name}</Label>
             {layer.selection_type === 'single' && (
-              <div className="options">
+              <div className="flex flex-col gap-1">
                 {ings.map(ing => (
-                  <label key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minHeight: 44 }}>
-                    <input type="radio" name={layer.id} value={ing.id} checked={(selection[layer.id] ?? []).includes(ing.id)} onChange={() => setLayerSelection(layer.id, 'single', ing.id)} />
+                  <label key={ing.id} className="flex items-center gap-2 min-h-[44px] cursor-pointer">
+                    <input type="radio" name={layer.id} value={ing.id} checked={(selection[layer.id] ?? []).includes(ing.id)} onChange={() => setLayerSelection(layer.id, 'single', ing.id)} className="w-4 h-4" />
                     <span>{ing.name}</span>
                   </label>
                 ))}
               </div>
             )}
             {layer.selection_type === 'multiple' && (
-              <div className="options">
+              <div className="flex flex-col gap-1">
                 {ings.map(ing => (
-                  <label key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minHeight: 44 }}>
-                    <input type="checkbox" value={ing.id} checked={(selection[layer.id] ?? []).includes(ing.id)} onChange={() => setLayerSelection(layer.id, 'multiple', ing.id)} />
+                  <label key={ing.id} className="flex items-center gap-2 min-h-[44px] cursor-pointer">
+                    <input type="checkbox" value={ing.id} checked={(selection[layer.id] ?? []).includes(ing.id)} onChange={() => setLayerSelection(layer.id, 'multiple', ing.id)} className="w-4 h-4 rounded" />
                     <span>{ing.name}</span>
                   </label>
                 ))}
               </div>
             )}
             {layer.selection_type === 'quantity' && layer.quantity_options != null && layer.quantity_options !== '' && (
-              <div className="options">
+              <div className="flex flex-wrap items-center gap-2">
                 {ings.map(ing => (
-                  <div key={ing.id} style={{ marginBottom: '0.5rem' }}>
-                    <span style={{ marginRight: '0.5rem' }}>{ing.name}:</span>
+                  <div key={ing.id} className="flex items-center gap-2 mb-2">
+                    <span className="text-stone-700">{ing.name}:</span>
                     {(layer.quantity_options as string).split(',').map(s => {
                       const n = parseInt(s.trim(), 10)
                       if (isNaN(n)) return null
                       const qMap = quantity[layer.id] ?? {}
                       const current = qMap[ing.id] ?? 0
+                      const isActive = current === n
                       return (
-                        <button key={n} type="button" className={current === n ? 'btn active' : 'btn btn-secondary'} style={{ marginRight: '0.5rem', padding: '0.4rem 0.75rem' }} onClick={() => setLayerSelection(layer.id, 'quantity', [ing.id, n] as [string, number])}>
+                        <Button
+                          key={n}
+                          type="button"
+                          variant={isActive ? 'default' : 'outline'}
+                          size="sm"
+                          className="min-h-[44px]"
+                          onClick={() => setLayerSelection(layer.id, 'quantity', [ing.id, n] as [string, number])}
+                        >
                           {String(n)}
-                        </button>
+                        </Button>
                       )
                     })}
                   </div>
@@ -198,9 +212,11 @@ export default function OrderForm({ customerId, deliveryDate, onSaved }: OrderFo
           </div>
         )
       })}
-      <button type="submit" className="btn" disabled={saving}>
-        {saving ? 'Wird gespeichert …' : 'Bestellung absenden'}
-      </button>
-    </form>
+        <Button type="submit" className="min-h-[48px]" disabled={saving}>
+          {saving ? 'Wird gespeichert …' : 'Bestellung absenden'}
+        </Button>
+        </CardContent>
+      </form>
+    </Card>
   )
 }

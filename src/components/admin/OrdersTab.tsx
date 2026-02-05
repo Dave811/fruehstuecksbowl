@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
-import { getNextMonday } from '../../utils/dateUtils'
+import { supabase } from '@/lib/supabase'
+import { getNextMonday } from '@/utils/dateUtils'
+import DatePicker from '@/components/DatePicker'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 
 type OrderRow = {
   id: string
@@ -29,30 +32,36 @@ export default function OrdersTab() {
   }, [deliveryDate])
 
   return (
-    <div className="card">
-      <h2>Bestellübersicht</h2>
-      <div className="form-group">
-        <label>Lieferdatum (Montag)</label>
-        <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
-      </div>
-      {loading ? <p>Lade …</p> : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {orders.map(o => (
-            <li key={o.id} style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border)' }}>
-              <strong>{o.customers?.name ?? '?'}</strong>
-              <ul style={{ margin: '0.25rem 0 0 1rem', padding: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
-                {o.order_items?.map((oi, idx) => (
-                  <li key={idx}>
-                    {oi.ingredients?.name ?? '?'} {oi.quantity > 1 ? `(${oi.quantity})` : ''}
-                    {oi.ingredients?.layers?.name ? ` — ${oi.ingredients.layers.name}` : ''}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      )}
-      {!loading && orders.length === 0 && <p className="muted">Keine Bestellungen für diesen Tag.</p>}
-    </div>
+    <Card className="mb-4">
+      <CardHeader>
+        <CardTitle>Bestellübersicht</CardTitle>
+        <div className="space-y-2 print:hidden">
+          <Label>Lieferdatum (Montag)</Label>
+          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Montag wählen" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p className="text-muted-foreground">Lade …</p>
+        ) : (
+          <ul className="list-none p-0 m-0 space-y-3">
+            {orders.map(o => (
+              <li key={o.id} className="py-3 border-b border-border last:border-0">
+                <strong className="text-foreground">{o.customers?.name ?? '?'}</strong>
+                <ul className="mt-1 ml-4 p-0 text-sm text-muted-foreground">
+                  {o.order_items?.map((oi, idx) => (
+                    <li key={idx}>
+                      {oi.ingredients?.name ?? '?'} {oi.quantity > 1 ? `(${oi.quantity})` : ''}
+                      {oi.ingredients?.layers?.name ? ` — ${oi.ingredients.layers.name}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!loading && orders.length === 0 && <p className="text-muted-foreground text-sm">Keine Bestellungen für diesen Tag.</p>}
+      </CardContent>
+    </Card>
   )
 }

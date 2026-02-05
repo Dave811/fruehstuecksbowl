@@ -1,15 +1,38 @@
-/** Returns the next Monday (today if today is Monday). */
+/**
+ * Wochentag-Index überall in der App: 0 = Montag, 1 = Dienstag, …, 6 = Sonntag.
+ * Entspricht Kalender/ISO (Woche beginnt mit Montag), nicht JS getDay() (0 = Sonntag).
+ */
+
+/** JS getDay(): 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa */
+const JS_SUNDAY = 0
+const JS_MONDAY = 1
+
+/** Unser Index (0=Mo … 6=So) → JS getDay() */
+export function weekdayIndexToJsDay(index: number): number {
+  if (index < 0 || index > 6) return JS_MONDAY
+  return index === 6 ? JS_SUNDAY : index + 1
+}
+
+/** JS getDay() → unser Index (0=Mo … 6=So) */
+export function jsDayToWeekdayIndex(jsDay: number): number {
+  return jsDay === JS_SUNDAY ? 6 : jsDay - 1
+}
+
+/** Nächsten Montag (YYYY-MM-DD); wenn heute Montag, dann heute. */
 export function getNextMonday(): string {
   const d = new Date()
-  const day = d.getDay()
-  const diff = day === 0 ? 1 : day === 1 ? 0 : 8 - day
+  const jsDay = d.getDay()
+  const daysUntilMonday = jsDay === JS_SUNDAY ? 1 : jsDay === JS_MONDAY ? 0 : 8 - jsDay
   const next = new Date(d)
-  next.setDate(d.getDate() + diff)
+  next.setDate(d.getDate() + daysUntilMonday)
   next.setHours(0, 0, 0, 0)
   return next.toISOString().slice(0, 10)
 }
 
-/** Weekday: 0=Sun, 1=Mon, ..., 4=Thu. Returns true if now is past cutoff (e.g. Thu 16:00 before that Monday). */
+/**
+ * Bestellschluss: cutoffWeekday = unser Index (0=Mo … 6=So).
+ * Lieferdatum = Montag; true = jetzt ist nach dem konfigurierten Wochentag/Uhrzeit.
+ */
 export function isOrderClosedForDelivery(
   deliveryDate: string,
   cutoffWeekday: number,
@@ -17,15 +40,15 @@ export function isOrderClosedForDelivery(
   cutoffMinute: number
 ): boolean {
   const delivery = new Date(deliveryDate + 'T12:00:00')
-  const deliveryDay = delivery.getDay()
-  const daysBack = (deliveryDay - cutoffWeekday + 7) % 7
+  const deliveryJsDay = delivery.getDay()
+  const jsCutoff = weekdayIndexToJsDay(cutoffWeekday)
+  const daysBack = (deliveryJsDay - jsCutoff + 7) % 7
   const cutoff = new Date(delivery)
   cutoff.setDate(cutoff.getDate() - daysBack)
   cutoff.setHours(cutoffHour, cutoffMinute, 0, 0)
   return new Date() >= cutoff
 }
 
-/** Get cutoff date for display. */
 export function getCutoffForDelivery(
   deliveryDate: string,
   cutoffWeekday: number,
@@ -33,8 +56,9 @@ export function getCutoffForDelivery(
   cutoffMinute: number
 ): Date {
   const delivery = new Date(deliveryDate + 'T12:00:00')
-  const deliveryDay = delivery.getDay()
-  const daysBack = (deliveryDay - cutoffWeekday + 7) % 7
+  const deliveryJsDay = delivery.getDay()
+  const jsCutoff = weekdayIndexToJsDay(cutoffWeekday)
+  const daysBack = (deliveryJsDay - jsCutoff + 7) % 7
   const cutoff = new Date(delivery)
   cutoff.setDate(cutoff.getDate() - daysBack)
   cutoff.setHours(cutoffHour, cutoffMinute, 0, 0)

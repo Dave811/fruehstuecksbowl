@@ -1,193 +1,168 @@
-:root {
-  --bg: #f5f0e8;
-  --card: #fff;
-  --text: #1a1a1a;
-  --muted: #666;
-  --primary: #c45c26;
-  --primary-hover: #a04a1e;
-  --border: #e0d8cc;
-  --radius: 12px;
-  --touch: 48px;
-}
+@import "tailwindcss";
+@import "tw-animate-css";
 
-* {
-  box-sizing: border-box;
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-primary: #c45c26;
+  --color-primary-hover: #a04a1e;
+  --color-surface: #f5f0e8;
+  --min-height-touch: 48px;
 }
 
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background-color: var(--color-surface);
+  color: var(--color-stone-900);
   min-height: 100vh;
+  antialiased: auto;
 }
 
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* react-day-picker: Woche Mo–So, Farben an App anpassen */
+.date-picker-dropdown .rdp-weekday {
+  font-weight: 600;
+  color: var(--color-stone-500);
 }
-
-.header {
-  background: var(--card);
-  padding: 1rem 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 1px 0 var(--border);
+.date-picker-dropdown .rdp-day_button:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
-
-.logo {
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: var(--text);
-  text-decoration: none;
+.date-picker-dropdown .rdp-day_selected {
+  background-color: var(--color-primary);
+  color: white;
 }
-
-.header nav {
-  display: flex;
-  gap: 1rem;
+.date-picker-dropdown .rdp-day_selected:hover {
+  background-color: var(--color-primary-hover);
 }
-
-.header nav a {
-  color: var(--muted);
-  text-decoration: none;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius);
-}
-
-.header nav a:hover,
-.header nav a.active {
-  color: var(--primary);
-  background: rgba(196, 92, 38, 0.1);
-}
-
-.main {
-  flex: 1;
-  padding: 1.5rem;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-h1, h2 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-}
-
-.card {
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--touch);
-  padding: 0 1.25rem;
-  font-size: 1rem;
-  font-weight: 500;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  background: var(--primary);
-  color: #fff;
-  text-decoration: none;
-}
-
-.btn:hover {
-  background: var(--primary-hover);
-}
-
-.btn-secondary {
-  background: var(--border);
-  color: var(--text);
-}
-
-.btn-secondary:hover {
-  background: #d0c8bc;
-}
-
-input, select, textarea {
-  min-height: var(--touch);
-  padding: 0 1rem;
-  font-size: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  width: 100%;
-}
-
-label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-weight: 500;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.tabs button {
-  min-height: 44px;
-  padding: 0 1rem;
-  font-size: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  cursor: pointer;
-}
-
-.tabs button.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-}
-
-.muted { color: var(--muted); font-size: 0.9rem; }
-
-.slips-print {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-.slip-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.slip-name { font-weight: 700; font-size: 1.1rem; }
-.slip-date { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem; }
-.slip-list { margin: 0; padding-left: 1.25rem; }
-
-.shopping-list { padding-left: 1.25rem; }
 
 @media print {
-  .header, .no-print, .btn, nav, .tabs {
+  .print\:hidden {
     display: none !important;
   }
-  .main { max-width: none; padding: 0; }
-  .slips-print {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+  main.print\:max-w-none,
+  .print\:max-w-none {
+    max-width: none;
   }
-  .slip-card {
-    border: 1px solid #000;
-    padding: 0.5rem;
-    font-size: 0.85rem;
+  main.print\:p-0,
+  .print\:p-0 {
+    padding: 0;
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: #f5f0e8;
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* Brand: Frühstücksbowl orange */
+  --primary: #c45c26;
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
