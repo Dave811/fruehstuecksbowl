@@ -1,12 +1,12 @@
 import { useState } from 'react'
+import { getEnv } from '../lib/env'
 
 const ADMIN_STORAGE = 'bowl_admin_ok'
 
 function AdminGate({ children }: { children: React.ReactNode }) {
   const [pw, setPw] = useState('')
   const [ok, setOk] = useState(() => typeof localStorage !== 'undefined' && localStorage.getItem(ADMIN_STORAGE) === '1')
-  const expected = import.meta.env.VITE_ADMIN_PASSWORD ?? 'admin123'
-  console.log('[AdminGate] VITE_ADMIN_PASSWORD from env:', import.meta.env.VITE_ADMIN_PASSWORD, '→ expected:', expected)
+  const expected = getEnv()?.VITE_ADMIN_PASSWORD ?? 'admin123'
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

@@ -4,12 +4,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-        VITE_ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD}
     environment:
-      ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD}
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      VITE_ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.bestellen.rule=Host(`bestellen.hasshoff.net`)"
