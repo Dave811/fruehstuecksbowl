@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { DayPicker } from 'react-day-picker'
+import { DayPicker, type Matcher } from 'react-day-picker'
 import { de } from 'date-fns/locale'
 import 'react-day-picker/dist/style.css'
 
@@ -56,7 +56,7 @@ export default function DatePicker({ value, onChange, id, placeholder = 'Datum w
 
   const fromDate = min ? new Date(min + 'T12:00:00') : undefined
   const toDate = max ? new Date(max + 'T12:00:00') : undefined
-  const disabledMatchers: (object | ((date: Date) => boolean))[] = [
+  const disabledMatchers: Matcher[] = [
     ...(fromDate ? [{ before: fromDate }] : []),
     ...(toDate ? [{ after: toDate }] : []),
     ...(disabledFn ? [disabledFn] : []),
