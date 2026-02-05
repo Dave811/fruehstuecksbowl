@@ -1,6 +1,5 @@
 services:
   bestellen:
-    env_file: .env
     build:
       context: .
       dockerfile: Dockerfile
