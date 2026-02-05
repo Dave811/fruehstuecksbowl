@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Customer } from '@/types'
-import { getNextMonday } from '@/utils/dateUtils'
+import { getNextDeliveryDay, getNextMonday, isDeliverableDate } from '@/utils/dateUtils'
 import OrderForm from '@/components/OrderForm'
 import MyOrder from '@/components/MyOrder'
 import DatePicker from '@/components/DatePicker'
@@ -34,8 +34,28 @@ export default function OrderPage() {
   const [name, setName] = useState('')
   const [dob, setDob] = useState('')
   const [deliveryDate, setDeliveryDate] = useState(getNextMonday())
+  const [deliveryWeekday, setDeliveryWeekday] = useState(0)
+  const [pausedDeliveryDates, setPausedDeliveryDates] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadDefaultDelivery() {
+      const { data } = await supabase.from('app_settings').select('key, value')
+      const m: Record<string, string> = {}
+      for (const row of data ?? []) m[row.key] = row.value ?? ''
+      const weekday = parseInt(m.delivery_weekday ?? '0', 10)
+      const paused = (m.paused_delivery_dates ?? '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
+      if (!cancelled) {
+        setDeliveryWeekday(weekday)
+        setPausedDeliveryDates(paused)
+        setDeliveryDate(getNextDeliveryDay(weekday, paused))
+      }
+    }
+    loadDefaultDelivery()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     if (!stored) return
@@ -97,7 +117,18 @@ export default function OrderPage() {
         </Button>
         <div className="print:hidden mb-4 space-y-2">
           <Label>Lieferdatum</Label>
-          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Datum wählen" />
+          <DatePicker
+            value={deliveryDate}
+            onChange={setDeliveryDate}
+            placeholder="Datum wählen"
+            disabled={(date) => !isDeliverableDate(date, deliveryWeekday, new Set(pausedDeliveryDates))}
+            modifiers={{
+              deliverable: (date) => isDeliverableDate(date, deliveryWeekday, new Set(pausedDeliveryDates)),
+            }}
+            modifiersClassNames={{
+              deliverable: 'deliverable-day',
+            }}
+          />
         </div>
         <OrderForm customerId={customer.id} deliveryDate={deliveryDate} onSaved={() => {}} />
         <MyOrder customerId={customer.id} deliveryDate={deliveryDate} />

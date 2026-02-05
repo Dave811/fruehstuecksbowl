@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getNextMonday } from '@/utils/dateUtils'
+import { getNextMonday, getNextDeliveryDay } from '@/utils/dateUtils'
 import type { Ingredient } from '@/types'
 import DatePicker from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,22 @@ export default function ShoppingListTab() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+    async function loadDefault() {
+      const { data } = await supabase.from('app_settings').select('key, value')
+      const m: Record<string, string> = {}
+      for (const row of data ?? []) m[row.key] = row.value ?? ''
+      const weekday = parseInt(m.delivery_weekday ?? '0', 10)
+      const paused = (m.paused_delivery_dates ?? '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
+      if (!cancelled) setDeliveryDate(getNextDeliveryDay(weekday, paused))
+    }
+    loadDefault()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!deliveryDate) return
+    let cancelled = false
     async function load() {
       const { data: orderData } = await supabase.from('orders').select('id').eq('delivery_date', deliveryDate)
       const orderIds = (orderData ?? []).map(o => (o as { id: string }).id)
@@ -31,9 +47,10 @@ export default function ShoppingListTab() {
       const { data: ing } = await supabase.from('ingredients').select('*')
       setItems((itemData ?? []) as OrderItemRow[])
       setIngredients((ing ?? []) as Ingredient[])
-      setLoading(false)
+      if (!cancelled) setLoading(false)
     }
     load()
+    return () => { cancelled = true }
   }, [deliveryDate])
 
   const aggregated: Agg[] = []
@@ -67,8 +84,8 @@ export default function ShoppingListTab() {
         <CardTitle>Einkaufsliste</CardTitle>
         <p className="text-muted-foreground text-sm font-normal">Für den gewählten Liefermontag. Drucken mit Browser-Druck (Strg+P).</p>
         <div className="space-y-2 print:hidden">
-          <Label>Lieferdatum (Montag)</Label>
-          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Montag wählen" />
+          <Label>Lieferdatum</Label>
+          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Datum wählen" />
         </div>
         <Button type="button" className="print:hidden min-h-[48px] mb-4" onClick={() => window.print()}>
           Drucken

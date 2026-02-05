@@ -18,15 +18,67 @@ export function jsDayToWeekdayIndex(jsDay: number): number {
   return jsDay === JS_SUNDAY ? 6 : jsDay - 1
 }
 
+/**
+ * Lieferdatum ist wählbar: in der Zukunft oder heute, Wochentag = Liefertag, nicht pausiert.
+ * deliveryWeekday = unser Index (0=Mo … 6=So), pausedSet = Set von YYYY-MM-DD.
+ */
+export function isDeliverableDate(
+  date: Date,
+  deliveryWeekday: number,
+  pausedSet: Set<string>
+): boolean {
+  const ymd = dateToYMD(date)
+  const today = dateToYMD(new Date())
+  if (ymd < today) return false
+  const targetJsDay = weekdayIndexToJsDay(deliveryWeekday >= 0 && deliveryWeekday <= 6 ? deliveryWeekday : 0)
+  if (date.getDay() !== targetJsDay) return false
+  if (pausedSet.has(ymd)) return false
+  return true
+}
+
+/** Datum in Ortszeit als YYYY-MM-DD (kein UTC-Shift). */
+export function dateToYMD(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Nächstes Datum mit diesem Wochentag (0=Mo … 6=So), 12:00 Ortszeit (für Kalender-Anzeige). */
+export function getNextDateForWeekday(weekdayIndex: number): Date {
+  const targetJsDay = weekdayIndexToJsDay(weekdayIndex >= 0 && weekdayIndex <= 6 ? weekdayIndex : 0)
+  const d = new Date()
+  d.setHours(12, 0, 0, 0)
+  const todayJs = d.getDay()
+  const days = (targetJsDay - todayJs + 7) % 7
+  const next = new Date(d)
+  next.setDate(d.getDate() + days)
+  return next
+}
+
 /** Nächsten Montag (YYYY-MM-DD); wenn heute Montag, dann heute. */
 export function getNextMonday(): string {
+  return getNextDeliveryDay(0)
+}
+
+/**
+ * Nächsten Liefertag (Wochentag 0=Mo … 6=So). Pausierte Daten (YYYY-MM-DD) werden übersprungen.
+ */
+export function getNextDeliveryDay(
+  weekdayIndex: number,
+  pausedDates: string[] = []
+): string {
+  const paused = new Set(pausedDates)
+  const targetJsDay = weekdayIndexToJsDay(weekdayIndex >= 0 && weekdayIndex <= 6 ? weekdayIndex : 0)
   const d = new Date()
-  const jsDay = d.getDay()
-  const daysUntilMonday = jsDay === JS_SUNDAY ? 1 : jsDay === JS_MONDAY ? 0 : 8 - jsDay
-  const next = new Date(d)
-  next.setDate(d.getDate() + daysUntilMonday)
-  next.setHours(0, 0, 0, 0)
-  return next.toISOString().slice(0, 10)
+  d.setHours(0, 0, 0, 0)
+  for (let i = 0; i <= 365; i++) {
+    const candidate = new Date(d)
+    candidate.setDate(d.getDate() + i)
+    const ymd = dateToYMD(candidate)
+    if (candidate.getDay() === targetJsDay && !paused.has(ymd)) return ymd
+  }
+  return dateToYMD(d)
 }
 
 /**

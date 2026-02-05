@@ -58,7 +58,13 @@ export function DatePickerBirth({
             toYear={new Date().getFullYear()}
             onSelect={(d) => {
               if (d) {
-                onChange(d.toISOString().slice(0, 10))
+                onChange(
+                [
+                  d.getFullYear(),
+                  String(d.getMonth() + 1).padStart(2, "0"),
+                  String(d.getDate()).padStart(2, "0"),
+                ].join("-")
+              )
                 setOpen(false)
               }
             }}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getNextMonday } from '@/utils/dateUtils'
+import { getNextMonday, getNextDeliveryDay } from '@/utils/dateUtils'
 import { formatDate } from '@/utils/dateUtils'
 import DatePicker from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
@@ -15,21 +15,40 @@ type OrderForSlip = {
 }
 
 export default function OrderSlipsTab() {
-  const [deliveryDate, setDeliveryDate] = useState(getNextMonday())
+  const [deliveryDate, setDeliveryDate] = useState('')
   const [orders, setOrders] = useState<OrderForSlip[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+    async function loadDefault() {
+      const { data } = await supabase.from('app_settings').select('key, value')
+      const m: Record<string, string> = {}
+      for (const row of data ?? []) m[row.key] = row.value ?? ''
+      const weekday = parseInt(m.delivery_weekday ?? '0', 10)
+      const paused = (m.paused_delivery_dates ?? '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
+      if (!cancelled) setDeliveryDate(d => d || getNextDeliveryDay(weekday, paused))
+    }
+    loadDefault()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!deliveryDate) return
+    let cancelled = false
     async function load() {
       const { data } = await supabase.from('orders').select(`
         id, delivery_date,
         customers ( name ),
         order_items ( quantity, ingredients ( name, layers ( name, sort_order ) ) )
       `).eq('delivery_date', deliveryDate).order('created_at')
-      setOrders((data ?? []) as unknown as OrderForSlip[])
-      setLoading(false)
+      if (!cancelled) {
+        setOrders((data ?? []) as unknown as OrderForSlip[])
+        setLoading(false)
+      }
     }
     load()
+    return () => { cancelled = true }
   }, [deliveryDate])
 
   function printSlips() {
@@ -58,8 +77,8 @@ export default function OrderSlipsTab() {
         <CardTitle>Bestellzettel</CardTitle>
         <p className="text-muted-foreground text-sm font-normal">Mehrere Zettel pro A4-Seite. Drucken mit Browser-Druck (Strg+P).</p>
         <div className="space-y-2 print:hidden">
-          <Label>Lieferdatum (Montag)</Label>
-          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Montag wählen" />
+          <Label>Lieferdatum</Label>
+          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Datum wählen" />
         </div>
         <Button type="button" className="print:hidden min-h-[48px] mb-4" onClick={printSlips}>
           Drucken

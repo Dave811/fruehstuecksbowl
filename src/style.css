@@ -32,6 +32,17 @@ body {
 .date-picker-dropdown .rdp-day_selected:hover {
   background-color: var(--color-primary-hover);
 }
+/* Belieferbare Tage im Lieferdatum-Picker hervorheben (Klasse wird per modifiersClassNames gesetzt) */
+.date-picker-dropdown .rdp-day.deliverable-day .rdp-day_button:not([aria-selected="true"]) {
+  background-color: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgb(34 197 94 / 0.4);
+}
+.date-picker-dropdown .rdp-day.deliverable-day .rdp-day_button:hover:not([aria-selected="true"]) {
+  background-color: #bbf7d0;
+  box-shadow: 0 0 0 2px rgb(34 197 94 / 0.6);
+}
 
 @media print {
   .print\:hidden {

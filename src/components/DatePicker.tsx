@@ -3,6 +3,8 @@ import { DayPicker } from 'react-day-picker'
 import { de } from 'date-fns/locale'
 import 'react-day-picker/dist/style.css'
 
+type DateMatcher = Date | Date[] | ((date: Date) => boolean)
+
 interface DatePickerProps {
   value: string
   onChange: (value: string) => void
@@ -10,10 +12,16 @@ interface DatePickerProps {
   placeholder?: string
   min?: string
   max?: string
+  /** Wenn gesetzt: nur diese Daten sind deaktiviert (z. B. nicht belieferbar). */
+  disabled?: (date: Date) => boolean
+  /** Zusätzliche Modifiers für die Kalender-Tage (z. B. belieferbar). */
+  modifiers?: Record<string, DateMatcher>
+  /** Klassen für die Modifiers (z. B. grüne Hervorhebung für belieferbar). */
+  modifiersClassNames?: Record<string, string>
 }
 
 /** Kalender-Picker: Woche beginnt mit Montag (Mo … So). */
-export default function DatePicker({ value, onChange, id, placeholder = 'Datum wählen', min, max }: DatePickerProps) {
+export default function DatePicker({ value, onChange, id, placeholder = 'Datum wählen', min, max, disabled: disabledFn, modifiers, modifiersClassNames }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<Date | undefined>(() => (value ? new Date(value + 'T12:00:00') : undefined))
   const ref = useRef<HTMLDivElement>(null)
@@ -31,20 +39,29 @@ export default function DatePicker({ value, onChange, id, placeholder = 'Datum w
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
+  function toYMD(d: Date): string {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
   function handleSelect(date: Date | undefined) {
     setSelected(date)
     if (date) {
-      onChange(date.toISOString().slice(0, 10))
+      onChange(toYMD(date))
       setOpen(false)
     }
   }
 
   const fromDate = min ? new Date(min + 'T12:00:00') : undefined
   const toDate = max ? new Date(max + 'T12:00:00') : undefined
-  const disabledMatchers = [
+  const disabledMatchers: (object | ((date: Date) => boolean))[] = [
     ...(fromDate ? [{ before: fromDate }] : []),
     ...(toDate ? [{ after: toDate }] : []),
+    ...(disabledFn ? [disabledFn] : []),
   ]
+  const disabled = disabledMatchers.length > 0 ? disabledMatchers : undefined
 
   return (
     <div ref={ref} className="relative inline-block w-full">
@@ -66,8 +83,10 @@ export default function DatePicker({ value, onChange, id, placeholder = 'Datum w
             onSelect={handleSelect}
             locale={de}
             weekStartsOn={1}
-            disabled={disabledMatchers.length > 0 ? disabledMatchers : undefined}
+            disabled={disabled}
             defaultMonth={selected ?? fromDate ?? new Date()}
+            modifiers={modifiers}
+            modifiersClassNames={modifiersClassNames}
           />
         </div>
       )}
