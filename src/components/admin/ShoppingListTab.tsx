@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getNextMonday, getNextDeliveryDay } from '@/utils/dateUtils'
+import { getNextDeliveryDay, formatDate, isDeliverableDate } from '@/utils/dateUtils'
 import type { Ingredient } from '@/types'
 import DatePicker from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,9 @@ type OrderItemRow = { ingredient_id: string; quantity: number }
 type Agg = { count: number; ingredient: Ingredient }
 
 export default function ShoppingListTab() {
-  const [deliveryDate, setDeliveryDate] = useState(getNextMonday())
+  const [deliveryDate, setDeliveryDate] = useState('')
+  const [deliveryWeekday, setDeliveryWeekday] = useState(0)
+  const [pausedDeliveryDates, setPausedDeliveryDates] = useState<string[]>([])
   const [items, setItems] = useState<OrderItemRow[]>([])
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [loading, setLoading] = useState(true)
@@ -24,7 +26,12 @@ export default function ShoppingListTab() {
       for (const row of data ?? []) m[row.key] = row.value ?? ''
       const weekday = parseInt(m.delivery_weekday ?? '0', 10)
       const paused = (m.paused_delivery_dates ?? '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
-      if (!cancelled) setDeliveryDate(getNextDeliveryDay(weekday, paused))
+      const next = getNextDeliveryDay(weekday, paused)
+      if (!cancelled) {
+        setDeliveryWeekday(weekday)
+        setPausedDeliveryDates(paused)
+        setDeliveryDate(d => d || next)
+      }
     }
     loadDefault()
     return () => { cancelled = true }
@@ -85,7 +92,23 @@ export default function ShoppingListTab() {
         <p className="text-muted-foreground text-sm font-normal">Für den gewählten Liefermontag. Drucken mit Browser-Druck (Strg+P).</p>
         <div className="space-y-2 print:hidden">
           <Label>Lieferdatum</Label>
-          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Datum wählen" />
+          <DatePicker
+            value={deliveryDate}
+            onChange={setDeliveryDate}
+            placeholder="Datum wählen"
+            disabled={(date) => !isDeliverableDate(date, deliveryWeekday, new Set(pausedDeliveryDates))}
+            modifiers={{
+              deliverable: (date) => isDeliverableDate(date, deliveryWeekday, new Set(pausedDeliveryDates)),
+            }}
+            modifiersClassNames={{
+              deliverable: 'deliverable-day',
+            }}
+          />
+          {deliveryDate && (
+            <p className="text-muted-foreground text-sm pt-1">
+              Gewählt: {formatDate(deliveryDate)}
+            </p>
+          )}
         </div>
         <Button type="button" className="print:hidden min-h-[48px] mb-4" onClick={() => window.print()}>
           Drucken

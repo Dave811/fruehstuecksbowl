@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getNextMonday, getNextDeliveryDay } from '@/utils/dateUtils'
-import { formatDate } from '@/utils/dateUtils'
+import { getNextDeliveryDay, formatDate, isDeliverableDate } from '@/utils/dateUtils'
 import DatePicker from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +15,8 @@ type OrderForSlip = {
 
 export default function OrderSlipsTab() {
   const [deliveryDate, setDeliveryDate] = useState('')
+  const [deliveryWeekday, setDeliveryWeekday] = useState(0)
+  const [pausedDeliveryDates, setPausedDeliveryDates] = useState<string[]>([])
   const [orders, setOrders] = useState<OrderForSlip[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -27,7 +28,11 @@ export default function OrderSlipsTab() {
       for (const row of data ?? []) m[row.key] = row.value ?? ''
       const weekday = parseInt(m.delivery_weekday ?? '0', 10)
       const paused = (m.paused_delivery_dates ?? '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
-      if (!cancelled) setDeliveryDate(d => d || getNextDeliveryDay(weekday, paused))
+      if (!cancelled) {
+        setDeliveryWeekday(weekday)
+        setPausedDeliveryDates(paused)
+        setDeliveryDate(d => d || getNextDeliveryDay(weekday, paused))
+      }
     }
     loadDefault()
     return () => { cancelled = true }
@@ -78,7 +83,23 @@ export default function OrderSlipsTab() {
         <p className="text-muted-foreground text-sm font-normal">Mehrere Zettel pro A4-Seite. Drucken mit Browser-Druck (Strg+P).</p>
         <div className="space-y-2 print:hidden">
           <Label>Lieferdatum</Label>
-          <DatePicker value={deliveryDate} onChange={setDeliveryDate} placeholder="Datum wählen" />
+          <DatePicker
+            value={deliveryDate}
+            onChange={setDeliveryDate}
+            placeholder="Datum wählen"
+            disabled={(date) => !isDeliverableDate(date, deliveryWeekday, new Set(pausedDeliveryDates))}
+            modifiers={{
+              deliverable: (date) => isDeliverableDate(date, deliveryWeekday, new Set(pausedDeliveryDates)),
+            }}
+            modifiersClassNames={{
+              deliverable: 'deliverable-day',
+            }}
+          />
+          {deliveryDate && (
+            <p className="text-muted-foreground text-sm pt-1">
+              Gewählt: {formatDate(deliveryDate)}
+            </p>
+          )}
         </div>
         <Button type="button" className="print:hidden min-h-[48px] mb-4" onClick={printSlips}>
           Drucken

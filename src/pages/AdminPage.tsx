@@ -3,13 +3,21 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu'
 import LayersTab from '@/components/admin/LayersTab'
 import IngredientsTab from '@/components/admin/IngredientsTab'
 import OrdersTab from '@/components/admin/OrdersTab'
 import SettingsTab from '@/components/admin/SettingsTab'
 import OrderSlipsTab from '@/components/admin/OrderSlipsTab'
 import ShoppingListTab from '@/components/admin/ShoppingListTab'
+
+type AdminSection = 'layers' | 'ingredients' | 'orders' | 'settings' | 'slips' | 'shopping'
 
 const ADMIN_STORAGE = 'bowl_admin_ok'
 
@@ -52,30 +60,48 @@ function AdminGate({ children }: { children: React.ReactNode }) {
   )
 }
 
-const adminTabTriggerClass =
-  'min-h-[44px] data-[state=active]:bg-card data-[state=active]:text-card-foreground data-[state=active]:shadow-sm'
+const sections: { id: AdminSection; label: string }[] = [
+  { id: 'layers', label: 'Ebenen' },
+  { id: 'ingredients', label: 'Zutaten' },
+  { id: 'orders', label: 'Bestellübersicht' },
+  { id: 'settings', label: 'Einstellungen' },
+  { id: 'slips', label: 'Bestellzettel' },
+  { id: 'shopping', label: 'Einkaufsliste' },
+]
 
 export default function AdminPage() {
+  const [active, setActive] = useState<AdminSection>('orders')
+
   return (
     <AdminGate>
       <div>
         <h1 className="mt-0 mb-4 text-2xl font-semibold">Admin</h1>
-        <Tabs defaultValue="orders" className="print:hidden">
-          <TabsList className="flex flex-nowrap h-auto gap-2 mb-4 p-1 bg-muted overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:[display:none] [&>*]:shrink-0">
-            <TabsTrigger value="layers" className={adminTabTriggerClass}>Ebenen</TabsTrigger>
-            <TabsTrigger value="ingredients" className={adminTabTriggerClass}>Zutaten</TabsTrigger>
-            <TabsTrigger value="orders" className={adminTabTriggerClass}>Bestellübersicht</TabsTrigger>
-            <TabsTrigger value="settings" className={adminTabTriggerClass}>Einstellungen</TabsTrigger>
-            <TabsTrigger value="slips" className={adminTabTriggerClass}>Bestellzettel</TabsTrigger>
-            <TabsTrigger value="shopping" className={adminTabTriggerClass}>Einkaufsliste</TabsTrigger>
-          </TabsList>
-          <TabsContent value="layers" className="mt-0"><LayersTab /></TabsContent>
-          <TabsContent value="ingredients" className="mt-0"><IngredientsTab /></TabsContent>
-          <TabsContent value="orders" className="mt-0"><OrdersTab /></TabsContent>
-          <TabsContent value="settings" className="mt-0"><SettingsTab /></TabsContent>
-          <TabsContent value="slips" className="mt-0"><OrderSlipsTab /></TabsContent>
-          <TabsContent value="shopping" className="mt-0"><ShoppingListTab /></TabsContent>
-        </Tabs>
+        <NavigationMenu viewport={false} className="print:hidden">
+          <NavigationMenuList className="flex flex-nowrap h-auto gap-1 mb-4 p-1 bg-muted rounded-lg overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:[display:none] [&>*]:shrink-0 min-h-[44px]">
+            {sections.map(({ id, label }) => (
+              <NavigationMenuItem key={id}>
+                <NavigationMenuLink asChild>
+                  <button
+                    type="button"
+                    className={navigationMenuTriggerStyle() + ' min-h-[44px] data-[active=true]:bg-card data-[active=true]:text-card-foreground data-[active=true]:shadow-sm'}
+                    data-active={active === id}
+                    onClick={() => setActive(id)}
+                  >
+                    {label}
+                  </button>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            ))}
+          </NavigationMenuList>
+        </NavigationMenu>
+        <div className="mt-0">
+          {active === 'layers' && <LayersTab />}
+          {active === 'ingredients' && <IngredientsTab />}
+          {active === 'orders' && <OrdersTab />}
+          {active === 'settings' && <SettingsTab />}
+          {active === 'slips' && <OrderSlipsTab />}
+          {active === 'shopping' && <ShoppingListTab />}
+        </div>
       </div>
     </AdminGate>
   )
