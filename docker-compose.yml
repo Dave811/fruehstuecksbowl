@@ -1,0 +1,21 @@
+services:
+  bestellen:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bestellen.rule=Host(`bestellen.hasshoff.net`)"
+      - "traefik.http.routers.bestellen.entrypoints=websecure"
+      - "traefik.http.routers.bestellen.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bestellen.loadbalancer.server.port=80"
+    networks:
+      - traefik-network
+
+networks:
+  traefik-network:
+    external: true
