@@ -1,0 +1,193 @@
+:root {
+  --bg: #f5f0e8;
+  --card: #fff;
+  --text: #1a1a1a;
+  --muted: #666;
+  --primary: #c45c26;
+  --primary-hover: #a04a1e;
+  --border: #e0d8cc;
+  --radius: 12px;
+  --touch: 48px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: var(--card);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.header nav a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+}
+
+.header nav a:hover,
+.header nav a.active {
+  color: var(--primary);
+  background: rgba(196, 92, 38, 0.1);
+}
+
+.main {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+h1, h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch);
+  padding: 0 1.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  text-decoration: none;
+}
+
+.btn:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  background: #d0c8bc;
+}
+
+input, select, textarea {
+  min-height: var(--touch);
+  padding: 0 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tabs button {
+  min-height: 44px;
+  padding: 0 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  cursor: pointer;
+}
+
+.tabs button.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.muted { color: var(--muted); font-size: 0.9rem; }
+
+.slips-print {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.slip-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.slip-name { font-weight: 700; font-size: 1.1rem; }
+.slip-date { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem; }
+.slip-list { margin: 0; padding-left: 1.25rem; }
+
+.shopping-list { padding-left: 1.25rem; }
+
+@media print {
+  .header, .no-print, .btn, nav, .tabs {
+    display: none !important;
+  }
+  .main { max-width: none; padding: 0; }
+  .slips-print {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  .slip-card {
+    border: 1px solid #000;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+}

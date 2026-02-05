@@ -1,0 +1,50 @@
+export type SelectionType = 'none' | 'single' | 'multiple' | 'quantity'
+
+export interface Layer {
+  id: string
+  name: string
+  sort_order: number
+  selection_type: SelectionType
+  quantity_options: string | null
+}
+
+export interface Ingredient {
+  id: string
+  layer_id: string
+  name: string
+  sort_order: number
+  portion_amount: number | null
+  portion_unit: string | null
+  package_amount: number | null
+  package_unit: string | null
+  package_label: string | null
+}
+
+export interface Customer {
+  id: string
+  name: string
+  date_of_birth: string
+}
+
+export interface Order {
+  id: string
+  customer_id: string
+  delivery_date: string
+  created_at: string
+}
+
+export interface OrderItem {
+  id: string
+  order_id: string
+  ingredient_id: string
+  quantity: number
+}
+
+export interface IngredientWithLayer extends Ingredient {
+  layers?: Layer | null
+}
+
+export interface OrderWithDetails extends Order {
+  customers?: Customer | null
+  order_items?: (OrderItem & { ingredients?: IngredientWithLayer | null })[] | null
+}
