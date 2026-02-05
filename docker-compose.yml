@@ -1,12 +1,15 @@
+# .env mit VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PASSWORD
+# Deploy: ./deploy.sh
 services:
   bestellen:
+    env_file: .env
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-      VITE_ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD}
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.bestellen.rule=Host(`bestellen.hasshoff.net`)"

@@ -1,7 +1,15 @@
-# Stage 1: Build (Bun, da Projekt bun.lock nutzt)
+# Build: Vite-App mit Werten aus .env (Build-Args)
+# Serve: Nginx liefert dist/
 FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
+
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_ADMIN_PASSWORD
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+ENV VITE_ADMIN_PASSWORD=$VITE_ADMIN_PASSWORD
 
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
@@ -9,15 +17,11 @@ RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run build
 
-# Stage 2: Serve mit Nginx (Env zur Laufzeit via entrypoint)
 FROM nginx:alpine
-
-RUN apk add --no-cache nodejs
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY entrypoint.js /entrypoint.js
 
 EXPOSE 80
 
-ENTRYPOINT ["node", "/entrypoint.js"]
+CMD ["nginx", "-g", "daemon off;"]
