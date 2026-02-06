@@ -135,20 +135,6 @@ export default function IngredientsTab() {
     load()
   }
 
-  async function reorderLayers(draggedLayerId: string, targetLayerId: string) {
-    if (draggedLayerId === targetLayerId) return
-    const sorted = [...layers].sort((a, b) => a.sort_order - b.sort_order)
-    const fromIdx = sorted.findIndex(l => l.id === draggedLayerId)
-    const toIdx = sorted.findIndex(l => l.id === targetLayerId)
-    if (fromIdx < 0 || toIdx < 0) return
-    const reordered = sorted.filter(l => l.id !== draggedLayerId)
-    reordered.splice(toIdx, 0, sorted[fromIdx])
-    for (let i = 0; i < reordered.length; i++) {
-      await supabase.from('layers').update({ sort_order: i }).eq('id', reordered[i].id)
-    }
-    load()
-  }
-
   async function onDragEnd(result: DropResult) {
     const { source, destination, draggableId } = result
     if (!destination) return
