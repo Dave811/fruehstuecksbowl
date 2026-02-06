@@ -15,6 +15,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            if (id.includes('@react-pdf/renderer')) return 'pdf'
             if (id.includes('react-router')) return 'router'
             if (id.includes('@supabase')) return 'supabase'
             if (id.includes('react-day-picker') || id.includes('date-fns')) return 'date'
@@ -24,6 +25,7 @@ export default defineConfig({
         },
       },
     },
-    chunkSizeWarningLimit: 600,
+    // React + react-dom are ~600 kB min; PDF is code-split and loaded on demand
+    chunkSizeWarningLimit: 650,
   },
 })

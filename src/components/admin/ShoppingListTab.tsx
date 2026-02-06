@@ -6,8 +6,6 @@ import DatePicker from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { renderShoppingListPdf } from '@/components/admin/ShoppingListDocument'
-
 type OrderItemRow = { ingredient_id: string; quantity: number }
 type Agg = { count: number; ingredient: Ingredient }
 
@@ -94,6 +92,7 @@ export default function ShoppingListTab() {
   }))
 
   async function generatePdf() {
+    const { renderShoppingListPdf } = await import('@/components/admin/ShoppingListDocument')
     const blob = await renderShoppingListPdf(linesForPdf, deliveryDate, formatDate, 'Einkaufsliste')
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

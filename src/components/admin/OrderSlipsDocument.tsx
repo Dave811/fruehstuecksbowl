@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   itemsRow: {
     flexDirection: 'row',
-    flexWrap: true,
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 2,
   },

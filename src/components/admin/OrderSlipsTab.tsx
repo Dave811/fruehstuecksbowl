@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { renderOrderSlipsPdf } from '@/components/admin/OrderSlipsDocument'
 import type { Layer, Ingredient } from '@/types'
 import { getNextDeliveryDay, formatDate, isDeliverableDate } from '@/utils/dateUtils'
 import DatePicker from '@/components/DatePicker'
@@ -105,16 +104,6 @@ export default function OrderSlipsTab() {
     window.print()
   }
 
-  function getExtrasList(order: OrderForSlip): string[] {
-    const items: string[] = []
-    for (const oi of order.order_items ?? []) {
-      const name = oi.ingredients?.name ?? '?'
-      const q = oi.quantity > 1 ? ` ${oi.quantity}x` : ''
-      items.push(name + q)
-    }
-    return items
-  }
-
   type LayerBlock = { layerName: string; sortOrder: number; layerIconUrl?: string | null; items: { text: string; icon_url?: string | null }[] }
 
   function getOrderLayers(order: OrderForSlip): LayerBlock[] {
@@ -163,6 +152,7 @@ export default function OrderSlipsTab() {
 
   async function generatePdf() {
     if (flatOrdersForPdf.length === 0) return
+    const { renderOrderSlipsPdf } = await import('@/components/admin/OrderSlipsDocument')
     const blob = await renderOrderSlipsPdf(slipsDataForPdf, formatDate)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
