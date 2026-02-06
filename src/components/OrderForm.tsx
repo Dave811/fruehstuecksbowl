@@ -25,6 +25,7 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
   const [cutoff, setCutoff] = useState({ weekday: 3, hour: 16, minute: 0 })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savedSuccess, setSavedSuccess] = useState(false)
   const [step, setStep] = useState<'form' | 'summary'>('form')
   const [room, setRoom] = useState('')
   const [allergies, setAllergies] = useState('')
@@ -153,6 +154,8 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
     if (items.length) await supabase.from('order_items').insert(items)
     setSaving(false)
     setStep('form')
+    setSavedSuccess(true)
+    setTimeout(() => setSavedSuccess(false), 4000)
     onSaved?.()
   }
 
@@ -248,6 +251,14 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
           <CardTitle>
             Deine Bowl für {new Date(deliveryDate + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
           </CardTitle>
+          <p className="text-muted-foreground text-sm font-normal mt-1">
+            Du kannst deine Bestellung bis zum Abgabeschluss bearbeiten. Änderungen einfach vornehmen und erneut abschicken.
+          </p>
+          {savedSuccess && (
+            <p className="text-green-600 dark:text-green-400 text-sm font-medium mt-2" role="alert">
+              Bestellung gespeichert. Du kannst weitere Änderungen vornehmen.
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
