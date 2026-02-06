@@ -79,7 +79,7 @@ export default function SettingsTab() {
       <CardHeader>
         <CardTitle>Einstellungen</CardTitle>
         <p className="text-muted-foreground text-sm font-normal">
-          Liefertag und Bestellschluss festlegen. Pausierte Daten: an diesen Tagen findet keine Lieferung statt (z. B. Feiertage).
+          Liefertag und Bestellschluss festlegen. Pausierte Daten: an diesen Tagen findet keine Lieferung statt (z. B. Feiertage).
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
