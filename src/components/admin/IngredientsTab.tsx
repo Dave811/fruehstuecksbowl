@@ -52,6 +52,7 @@ export default function IngredientsTab() {
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [dragOverLayerId, setDragOverLayerId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -136,9 +137,17 @@ export default function IngredientsTab() {
     load()
   }
 
-  async function handleDropOnLayer(draggedId: string, layerId: string) {
-    const newOrder = getNextSortOrderForLayer(layerId)
-    await supabase.from('ingredients').update({ layer_id: layerId, sort_order: newOrder }).eq('id', draggedId)
+  async function reorderLayers(draggedLayerId: string, targetLayerId: string) {
+    if (draggedLayerId === targetLayerId) return
+    const sorted = [...layers].sort((a, b) => a.sort_order - b.sort_order)
+    const fromIdx = sorted.findIndex(l => l.id === draggedLayerId)
+    const toIdx = sorted.findIndex(l => l.id === targetLayerId)
+    if (fromIdx < 0 || toIdx < 0) return
+    const reordered = sorted.filter(l => l.id !== draggedLayerId)
+    reordered.splice(toIdx, 0, sorted[fromIdx])
+    for (let i = 0; i < reordered.length; i++) {
+      await supabase.from('layers').update({ sort_order: i }).eq('id', reordered[i].id)
+    }
     load()
   }
 
@@ -325,19 +334,45 @@ export default function IngredientsTab() {
           {sortedLayers.map(layer => {
             const ings = getIngredientsByLayer(layer.id)
             return (
-              <section key={layer.id} className="rounded-lg border border-border p-4 space-y-3">
+              <section key={layer.id} className={cn('rounded-lg border border-border p-4 space-y-3 transition-opacity', draggingLayerId === layer.id && 'opacity-60')}>
                 <div
                   className={cn('flex items-center justify-between flex-wrap gap-2 rounded-md p-2 -m-2 transition-colors', dragOverLayerId === layer.id && 'bg-primary/10 ring-2 ring-primary/30')}
-                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverId(null); setDragOverLayerId(layer.id) }}
+                  onDragOver={e => {
+                    const isLayerDrag = e.dataTransfer.types.includes('application/x-layer-id')
+                    if (!isLayerDrag) {
+                      setDragOverLayerId(null)
+                      return
+                    }
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                    setDragOverId(null)
+                    if (draggingLayerId === layer.id) return
+                    setDragOverLayerId(layer.id)
+                  }}
                   onDragLeave={() => setDragOverLayerId(null)}
                   onDrop={e => {
+                    if (!e.dataTransfer.types.includes('application/x-layer-id')) return
                     e.preventDefault()
                     setDragOverLayerId(null)
-                    const id = e.dataTransfer.getData('text/plain')
-                    if (id) handleDropOnLayer(id, layer.id)
+                    const layerId = e.dataTransfer.getData('application/x-layer-id')
+                    if (layerId) reorderLayers(layerId, layer.id)
                   }}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div
+                      draggable
+                      onDragStart={e => {
+                        e.dataTransfer.setData('application/x-layer-id', layer.id)
+                        e.dataTransfer.effectAllowed = 'move'
+                        setDraggingLayerId(layer.id)
+                        setDragOverId(null)
+                      }}
+                      onDragEnd={() => setDraggingLayerId(null)}
+                      className="cursor-grab active:cursor-grabbing touch-none"
+                      title="Ebene verschieben"
+                    >
+                      <GripVertical className="h-5 w-5 text-muted-foreground" aria-hidden />
+                    </div>
                     {layer.icon_url && <img src={layer.icon_url} alt="" className="h-6 w-6 object-contain rounded" />}
                     <strong className="text-foreground">{layer.name}</strong>
                     <span className="text-muted-foreground text-sm">(Reihe {layer.sort_order}, {SELECTION_OPTIONS.find(o => o.value === layer.selection_type)?.label ?? layer.selection_type})</span>
@@ -349,7 +384,7 @@ export default function IngredientsTab() {
                   </div>
                 </div>
                 <ul className="list-none p-0 m-0 space-y-1">
-                  {ings.map((ing, idx) => (
+                  {ings.map((ing) => (
                     <li
                       key={ing.id}
                       draggable
@@ -367,7 +402,12 @@ export default function IngredientsTab() {
                         setDraggingId(ing.id)
                       }}
                       onDragEnd={() => setDraggingId(null)}
-                      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverId(ing.id) }}
+                      onDragOver={e => {
+                        if (e.dataTransfer.types.includes('application/x-layer-id')) return
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                        setDragOverId(ing.id)
+                      }}
                       onDragLeave={() => setDragOverId(null)}
                       onDrop={e => {
                         e.preventDefault()
