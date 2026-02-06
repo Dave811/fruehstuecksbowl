@@ -162,24 +162,29 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
     onSaved?.()
   }
 
-  const baseDisplayName = (() => {
-    const displayLayer = layers.find(l => l.selection_type === 'display_only')
-    if (!displayLayer) return '—'
-    const ings = getIngredientsForLayer(displayLayer.id)
-    return ings.length ? ings.map(i => i.name).join(', ') : '—'
-  })()
-
-  const selectedExtrasNames = (() => {
-    const names: string[] = []
-    for (const layer of layersSelectable) {
-      if (layer.selection_type !== 'single' && layer.selection_type !== 'multiple') continue
+  const summaryByLayer = (() => {
+    const result: { layerName: string; items: string[] }[] = []
+    const sorted = [...layersForDisplay].sort((a, b) => a.sort_order - b.sort_order)
+    for (const layer of sorted) {
       const ings = getIngredientsForLayer(layer.id)
-      for (const id of selection[layer.id] ?? []) {
-        const ing = ings.find(i => i.id === id)
-        if (ing) names.push(ing.name)
+      const items: string[] = []
+      if (layer.selection_type === 'display_only') {
+        items.push(...ings.map(i => i.name))
+      } else if (layer.selection_type === 'single' || layer.selection_type === 'multiple') {
+        for (const id of selection[layer.id] ?? []) {
+          const ing = ings.find(i => i.id === id)
+          if (ing) items.push(ing.name)
+        }
+      } else if (layer.selection_type === 'quantity') {
+        const qMap = quantity[layer.id] ?? {}
+        for (const ing of ings) {
+          const q = qMap[ing.id] ?? 0
+          if (q > 0) items.push(q > 1 ? `${ing.name} ${q}x` : ing.name)
+        }
       }
+      result.push({ layerName: layer.name, items })
     }
-    return names
+    return result
   })()
 
   if (loading) return <p className="text-muted-foreground">Wird geladen …</p>
@@ -217,14 +222,12 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
               <dt className="text-muted-foreground">Allergien / Unverträglichkeiten</dt>
               <dd className="font-medium text-foreground">{allergies || '—'}</dd>
             </div>
-            <div>
-              <dt className="text-muted-foreground">Basis</dt>
-              <dd className="font-medium text-foreground">{baseDisplayName}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Gewählte Extras</dt>
-              <dd className="font-medium text-foreground">{selectedExtrasNames.length ? selectedExtrasNames.join(', ') : 'Keine'}</dd>
-            </div>
+            {summaryByLayer.map(({ layerName, items }) => (
+              <div key={layerName}>
+                <dt className="text-muted-foreground">{layerName}</dt>
+                <dd className="font-medium text-foreground">{items.length ? items.join(', ') : '—'}</dd>
+              </div>
+            ))}
           </dl>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" className="min-h-[48px]" onClick={() => setStep('form')}>
