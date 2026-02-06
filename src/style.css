@@ -7,9 +7,17 @@
   --min-height-touch: 48px;
 }
 
+/* Mobile: 100vh can exceed visible viewport (address bar), causing endless scroll into background. */
+html {
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
 body {
   min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport: matches visible area when browser chrome shows/hides */
   antialiased: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain; /* prevents rubber-band scroll past content on mobile */
 }
 
 /* react-day-picker: Woche Mo–So, Farben aus Theme */

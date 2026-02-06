@@ -7,7 +7,7 @@ const AdminPage = lazy(() => import('@/pages/AdminPage'))
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background overflow-x-hidden">
       <header className="print:hidden bg-header text-header-foreground px-4 py-4 sm:px-6 flex items-center justify-between border-b border-border">
         <NavLink to="/" className="font-bold text-lg text-black no-underline">
           Frühstücksbowl
