@@ -163,7 +163,7 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
   }
 
   const summaryByLayer = (() => {
-    const result: { layerName: string; items: string[] }[] = []
+    const result: { layerName: string; layerIconUrl?: string | null; items: string[] }[] = []
     const sorted = [...layersForDisplay].sort((a, b) => a.sort_order - b.sort_order)
     for (const layer of sorted) {
       const ings = getIngredientsForLayer(layer.id)
@@ -182,7 +182,7 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
           if (q > 0) items.push(q > 1 ? `${ing.name} ${q}x` : ing.name)
         }
       }
-      result.push({ layerName: layer.name, items })
+      result.push({ layerName: layer.name, layerIconUrl: layer.icon_url, items })
     }
     return result
   })()
@@ -222,9 +222,12 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
               <dt className="text-muted-foreground">Allergien / Unverträglichkeiten</dt>
               <dd className="font-medium text-foreground">{allergies || '—'}</dd>
             </div>
-            {summaryByLayer.map(({ layerName, items }) => (
+            {summaryByLayer.map(({ layerName, layerIconUrl, items }) => (
               <div key={layerName}>
-                <dt className="text-muted-foreground">{layerName}</dt>
+                <dt className="text-muted-foreground flex items-center gap-2">
+                  {layerIconUrl && <img src={layerIconUrl} alt="" className="h-4 w-4 object-contain" />}
+                  {layerName}
+                </dt>
                 <dd className="font-medium text-foreground">{items.length ? items.join(', ') : '—'}</dd>
               </div>
             ))}
@@ -285,21 +288,33 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
             if (layer.selection_type === 'display_only') {
               return (
                 <div key={layer.id} className="space-y-2">
-                  <Label className="text-foreground font-medium">Feste Basis (nicht veränderbar)</Label>
-                  <p className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-foreground min-h-[44px] flex items-center">
-                    {ings.map(i => i.name).join(', ')}
+                  <Label className="text-foreground font-medium flex items-center gap-2">
+                    {layer.icon_url && <img src={layer.icon_url} alt="" className="h-5 w-5 object-contain" />}
+                    Feste Basis (nicht veränderbar)
+                  </Label>
+                  <p className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-foreground min-h-[44px] flex items-center gap-2 flex-wrap">
+                    {ings.map(i => (
+                      <span key={i.id} className="flex items-center gap-1.5">
+                        {i.icon_url && <img src={i.icon_url} alt="" className="h-4 w-4 object-contain" />}
+                        {i.name}
+                      </span>
+                    ))}
                   </p>
                 </div>
               )
             }
             return (
               <div key={layer.id} className="space-y-2">
-                <Label>{layer.name}</Label>
+                <Label className="flex items-center gap-2">
+                  {layer.icon_url && <img src={layer.icon_url} alt="" className="h-5 w-5 object-contain" />}
+                  {layer.name}
+                </Label>
                 {layer.selection_type === 'single' && (
                   <div className="flex flex-col gap-1">
                     {ings.map(ing => (
                       <label key={ing.id} className="flex items-center gap-2 min-h-[44px] cursor-pointer">
                         <input type="radio" name={layer.id} value={ing.id} checked={(selection[layer.id] ?? []).includes(ing.id)} onChange={() => setLayerSelection(layer.id, 'single', ing.id)} className="w-4 h-4" />
+                        {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain shrink-0" />}
                         <span>{ing.name}</span>
                       </label>
                     ))}
@@ -310,6 +325,7 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
                     {ings.map(ing => (
                       <label key={ing.id} className="flex items-center gap-2 min-h-[44px] cursor-pointer">
                         <input type="checkbox" value={ing.id} checked={(selection[layer.id] ?? []).includes(ing.id)} onChange={() => setLayerSelection(layer.id, 'multiple', ing.id)} className="w-4 h-4 rounded" />
+                        {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain shrink-0" />}
                         <span>{ing.name}</span>
                       </label>
                     ))}
@@ -319,6 +335,7 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
                   <div className="flex flex-wrap items-center gap-2">
                     {ings.map(ing => (
                       <div key={ing.id} className="flex items-center gap-2 mb-2">
+                        {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain shrink-0" />}
                         <span className="text-foreground">{ing.name}:</span>
                         {(layer.quantity_options as string).split(',').map(s => {
                           const n = parseInt(s.trim(), 10)

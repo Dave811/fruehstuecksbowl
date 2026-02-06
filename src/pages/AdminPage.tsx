@@ -104,6 +104,13 @@ export default function AdminPage() {
           {active === 'slips' && <OrderSlipsTab />}
           {active === 'shopping' && <ShoppingListTab />}
         </div>
+        <p className="mt-6 text-xs text-muted-foreground print:hidden">
+          Icons von{' '}
+          <a href="https://icons8.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+            Icons8
+          </a>{' '}
+          (icons8.com).
+        </p>
       </div>
     </AdminGate>
   )

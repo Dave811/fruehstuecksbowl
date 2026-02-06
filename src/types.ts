@@ -6,6 +6,7 @@ export interface Layer {
   sort_order: number
   selection_type: SelectionType
   quantity_options: string | null
+  icon_url?: string | null
 }
 
 export interface Ingredient {
@@ -18,6 +19,7 @@ export interface Ingredient {
   package_amount: number | null
   package_unit: string | null
   package_label: string | null
+  icon_url?: string | null
 }
 
 export interface Customer {

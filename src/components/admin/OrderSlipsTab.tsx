@@ -14,7 +14,7 @@ type OrderForSlip = {
   room: string | null
   allergies: string | null
   customers: { name: string } | null
-  order_items: { quantity: number; ingredients: { name: string; layers: { name: string; sort_order: number } | null } | null }[]
+  order_items: { quantity: number; ingredients: { name: string; icon_url?: string | null; layers: { name: string; sort_order: number; icon_url?: string | null } | null } | null }[]
 }
 
 export default function OrderSlipsTab() {
@@ -67,7 +67,7 @@ export default function OrderSlipsTab() {
       const { data } = await supabase.from('orders').select(`
         id, delivery_date, room, allergies,
         customers ( name ),
-        order_items ( quantity, ingredients ( name, layers ( name, sort_order ) ) )
+        order_items ( quantity, ingredients ( name, icon_url, layers ( name, sort_order, icon_url ) ) )
       `).eq('delivery_date', deliveryDate).order('room').order('created_at')
       if (!cancelled) {
         setOrders((data ?? []) as unknown as OrderForSlip[])
@@ -115,31 +115,31 @@ export default function OrderSlipsTab() {
     return items
   }
 
-  type LayerBlock = { layerName: string; sortOrder: number; items: string[] }
+  type LayerBlock = { layerName: string; sortOrder: number; layerIconUrl?: string | null; items: { text: string; icon_url?: string | null }[] }
 
   function getOrderLayers(order: OrderForSlip): LayerBlock[] {
-    const byLayer = new Map<string, { sortOrder: number; items: string[] }>()
+    const byLayer = new Map<string, { sortOrder: number; layerIconUrl?: string | null; items: { text: string; icon_url?: string | null }[] }>()
     for (const oi of order.order_items ?? []) {
       const layer = oi.ingredients?.layers
       const name = oi.ingredients?.name ?? '?'
       const q = oi.quantity > 1 ? ` ${oi.quantity}x` : ''
       const key = layer?.name ?? 'Sonstiges'
       const so = layer?.sort_order ?? 99
-      if (!byLayer.has(key)) byLayer.set(key, { sortOrder: so, items: [] })
-      byLayer.get(key)!.items.push(name + q)
+      if (!byLayer.has(key)) byLayer.set(key, { sortOrder: so, layerIconUrl: layer?.icon_url, items: [] })
+      byLayer.get(key)!.items.push({ text: name + q, icon_url: oi.ingredients?.icon_url })
     }
     const sorted = Array.from(byLayer.entries())
-      .map(([layerName, { sortOrder, items }]) => ({ layerName, sortOrder, items }))
+      .map(([layerName, { sortOrder, layerIconUrl, items }]) => ({ layerName, sortOrder, layerIconUrl, items }))
       .sort((a, b) => a.sortOrder - b.sortOrder)
     const basisFromOrder = sorted.find(b => b.layerName === 'Basis')
     if (basisFromOrder) {
       if (basisLabel !== '—') {
-        basisFromOrder.items = [basisLabel, ...basisFromOrder.items]
+        basisFromOrder.items = [{ text: basisLabel }, ...basisFromOrder.items]
       }
       return sorted
     }
     if (basisLabel !== '—') {
-      return [{ layerName: 'Basis', sortOrder: -1, items: [basisLabel] }, ...sorted]
+      return [{ layerName: 'Basis', sortOrder: -1, items: [{ text: basisLabel }] }, ...sorted]
     }
     return sorted
   }
@@ -153,9 +153,10 @@ export default function OrderSlipsTab() {
         allergies: order.allergies,
         customers: order.customers,
       },
-      layers: getOrderLayers(order).map(({ layerName, items }) => ({
+      layers: getOrderLayers(order).map(({ layerName, layerIconUrl, items }) => ({
         layerName,
-        items,
+        layerIconUrl: layerIconUrl ?? undefined,
+        items: items.map(i => ({ text: i.text, icon_url: i.icon_url ?? undefined })),
       })),
     }))
   }, [flatOrdersForPdf, basisLabel])
@@ -231,9 +232,21 @@ export default function OrderSlipsTab() {
                         <p className="text-sm mt-1"><strong>Allergien:</strong> {o.allergies}</p>
                       )}
                       <ul className="m-0 mt-2 pl-4 list-disc text-sm">
-                        {layerBlocks.map(({ layerName, items }) => (
+                        {layerBlocks.map(({ layerName, layerIconUrl, items }) => (
                           <li key={layerName}>
-                            <strong>{layerName}:</strong> {items.length ? items.join(', ') : '—'}
+                            <strong className="flex items-center gap-1.5">
+                              {layerIconUrl && <img src={layerIconUrl} alt="" className="h-3.5 w-3.5 object-contain inline" />}
+                              {layerName}:
+                            </strong>{' '}
+                            {items.length ? items.map((i, idx) => (
+                              <span key={idx}>
+                                {idx > 0 && ', '}
+                                <span className="inline-flex items-center gap-1">
+                                  {i.icon_url && <img src={i.icon_url} alt="" className="h-3 w-3 object-contain inline" />}
+                                  {i.text}
+                                </span>
+                              </span>
+                            )) : '—'}
                           </li>
                         ))}
                       </ul>

@@ -3,6 +3,7 @@ import {
   Page,
   View,
   Text,
+  Image,
   StyleSheet,
   pdf,
 } from '@react-pdf/renderer'
@@ -15,7 +16,11 @@ export type OrderForSlipPdf = {
   customers: { name: string } | null
 }
 
-export type LayerBlockPdf = { layerName: string; items: string[] }
+export type LayerBlockPdf = {
+  layerName: string
+  layerIconUrl?: string
+  items: { text: string; icon_url?: string }[]
+}
 
 type SlipData = { order: OrderForSlipPdf; layers: LayerBlockPdf[] }
 
@@ -76,6 +81,30 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     lineHeight: 1.3,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  itemsRow: {
+    flexDirection: 'row',
+    flexWrap: true,
+    alignItems: 'center',
+    gap: 2,
+  },
+  itemInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  iconSmall: {
+    width: 10,
+    height: 10,
+  },
+  iconTiny: {
+    width: 8,
+    height: 8,
+  },
   divider: {
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -104,12 +133,29 @@ function SlipCard({
           Allergien: {order.allergies?.trim() || '—'}
         </Text>
       </View>
-      {layers.map(({ layerName, items }) => (
+      {layers.map(({ layerName, layerIconUrl, items }) => (
         <View key={layerName}>
-          <Text style={styles.sectionTitle}>{layerName}</Text>
-          <Text style={styles.sectionText}>
-            {items.length ? items.join(', ') : '—'}
-          </Text>
+          <View style={styles.sectionTitleRow}>
+            {layerIconUrl ? (
+              <Image src={layerIconUrl} style={styles.iconSmall} />
+            ) : null}
+            <Text style={styles.sectionTitle}>{layerName}</Text>
+          </View>
+          <View style={[styles.sectionText, styles.itemsRow]}>
+            {items.length
+              ? items.map((item, idx) => (
+                  <View key={idx} style={styles.itemInline}>
+                    {item.icon_url ? (
+                      <Image src={item.icon_url} style={styles.iconTiny} />
+                    ) : null}
+                    <Text>
+                      {item.text}
+                      {idx < items.length - 1 ? ', ' : ''}
+                    </Text>
+                  </View>
+                ))
+              : <Text>—</Text>}
+          </View>
           <View style={styles.divider} />
         </View>
       ))}

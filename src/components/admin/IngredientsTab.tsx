@@ -23,6 +23,7 @@ export default function IngredientsTab() {
     package_amount: '' as number | '',
     package_unit: '',
     package_label: '',
+    icon_url: '',
   })
 
   useEffect(() => { load() }, [])
@@ -47,6 +48,7 @@ export default function IngredientsTab() {
       package_amount: form.package_amount === '' ? null : Number(form.package_amount),
       package_unit: form.package_unit || null,
       package_label: form.package_label || null,
+      icon_url: form.icon_url.trim() || null,
     }
     if (editing?.id) {
       await supabase.from('ingredients').update(payload).eq('id', editing.id)
@@ -55,7 +57,7 @@ export default function IngredientsTab() {
       await supabase.from('ingredients').insert(payload)
     }
     setEditing(null)
-    setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '' })
+    setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '', icon_url: '' })
     load()
   }
 
@@ -76,6 +78,7 @@ export default function IngredientsTab() {
       package_amount: i.package_amount ?? '',
       package_unit: i.package_unit ?? '',
       package_label: i.package_label ?? '',
+      icon_url: i.icon_url ?? '',
     })
   }
 
@@ -103,6 +106,20 @@ export default function IngredientsTab() {
             <Label>Reihenfolge</Label>
             <Input type="number" className="min-h-[48px]" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value, 10) || 0 }))} />
           </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Label className="mb-0">Icon / Bild (URL)</Label>
+              <Button type="button" variant="outline" size="sm" className="shrink-0" asChild>
+                <a href="https://icons8.com/icons" target="_blank" rel="noopener noreferrer" title="Icons8: Icon wählen, dann Bildadresse kopieren und hier einfügen">
+                  Icon suchen (Icons8)
+                </a>
+              </Button>
+            </div>
+            <Input className="min-h-[48px]" value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="https://… oder leer lassen" />
+            {form.icon_url.trim() && (
+              <img src={form.icon_url.trim()} alt="" className="h-10 w-10 object-contain rounded border border-border" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            )}
+          </div>
           <details className="space-y-4">
             <summary className="cursor-pointer font-medium text-muted-foreground">Einkaufsliste (Portion / Packung)</summary>
             <div className="mt-2 space-y-4 pl-2">
@@ -126,7 +143,7 @@ export default function IngredientsTab() {
           </details>
           <div className="flex gap-2">
             <Button type="submit" className="min-h-[48px]">{editing ? 'Speichern' : 'Hinzufügen'}</Button>
-            {editing && <Button type="button" variant="outline" onClick={() => { setEditing(null); setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '' }); }}>Abbrechen</Button>}
+            {editing && <Button type="button" variant="outline" onClick={() => { setEditing(null); setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '', icon_url: '' }); }}>Abbrechen</Button>}
           </div>
         </form>
         <ul className="list-none p-0 border-t border-border pt-4 space-y-2">
@@ -134,7 +151,9 @@ export default function IngredientsTab() {
             const layerName = layers.find(l => l.id === i.layer_id)?.name ?? '?'
             return (
               <li key={i.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <span className="text-foreground"><strong>{i.name}</strong> ({layerName}) {i.portion_amount != null && <small className="text-muted-foreground">{i.portion_amount}{i.portion_unit} → {i.package_amount}{i.package_unit ?? ''} {i.package_label}</small>}</span>
+                <span className="text-foreground flex items-center gap-2">
+                  {i.icon_url && <img src={i.icon_url} alt="" className="h-6 w-6 object-contain rounded" />}
+                  <strong>{i.name}</strong> ({layerName}) {i.portion_amount != null && <small className="text-muted-foreground">{i.portion_amount}{i.portion_unit} → {i.package_amount}{i.package_unit ?? ''} {i.package_label}</small>}</span>
                 <span className="flex gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => startEdit(i)}>Bearbeiten</Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => remove(i.id)}>Löschen</Button>

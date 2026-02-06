@@ -26,7 +26,7 @@ export default function MyOrder({ customerId, deliveryDate }: MyOrderProps) {
       }
       const { data: items } = await supabase.from('order_items').select(`
         id, order_id, ingredient_id, quantity,
-        ingredients ( id, name, layer_id, layers ( id, name, sort_order ) )
+        ingredients ( id, name, layer_id, icon_url, layers ( id, name, sort_order, icon_url ) )
       `).eq('order_id', (orderData as Order).id)
       setOrder({ ...(orderData as Order), order_items: (items ?? []) as unknown as OrderWithItems['order_items'] })
       setLoading(false)
@@ -37,16 +37,16 @@ export default function MyOrder({ customerId, deliveryDate }: MyOrderProps) {
   if (loading) return <p className="text-muted-foreground text-sm">Lade Bestellung …</p>
   if (!order || !order.order_items?.length) return null
 
-  const byLayer: Record<string, { name: string; sort_order: number; items: { name: string; quantity: number }[] }> = {}
+  const byLayer: Record<string, { name: string; sort_order: number; icon_url?: string | null; items: { name: string; quantity: number; icon_url?: string | null }[] }> = {}
   for (const oi of order.order_items) {
     const ing = (oi as { ingredients?: (Ingredient & { layers?: Layer | null }) | null }).ingredients
     if (!ing) continue
     const layer = ing.layers
     const layerId = layer?.id ?? 'other'
     if (!byLayer[layerId]) {
-      byLayer[layerId] = { name: layer?.name ?? 'Sonstiges', sort_order: layer?.sort_order ?? 99, items: [] }
+      byLayer[layerId] = { name: layer?.name ?? 'Sonstiges', sort_order: layer?.sort_order ?? 99, icon_url: layer?.icon_url, items: [] }
     }
-    byLayer[layerId].items.push({ name: ing.name, quantity: oi.quantity })
+    byLayer[layerId].items.push({ name: ing.name, quantity: oi.quantity, icon_url: ing.icon_url })
   }
   const sorted = Object.entries(byLayer).sort((a, b) => a[1].sort_order - b[1].sort_order)
 
@@ -66,9 +66,19 @@ export default function MyOrder({ customerId, deliveryDate }: MyOrderProps) {
       <CardContent>
         <ul className="list-none p-0 m-0 space-y-2">
           {sorted.map(([, g]) => (
-            <li key={g.name}>
-              <strong>{g.name}:</strong>{' '}
-              {g.items.map(i => (i.quantity > 1 ? `${i.name} (${i.quantity})` : i.name)).join(', ')}
+            <li key={g.name} className="flex flex-col gap-1">
+              <span className="font-semibold flex items-center gap-2">
+                {g.icon_url && <img src={g.icon_url} alt="" className="h-4 w-4 object-contain" />}
+                {g.name}:
+              </span>
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {g.items.map((i, idx) => (
+                  <span key={idx} className="flex items-center gap-1.5">
+                    {i.icon_url && <img src={i.icon_url} alt="" className="h-3.5 w-3.5 object-contain" />}
+                    {i.quantity > 1 ? `${i.name} (${i.quantity})` : i.name}
+                  </span>
+                ))}
+              </span>
             </li>
           ))}
         </ul>
