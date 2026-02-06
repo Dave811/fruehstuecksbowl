@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { jsPDF } from 'jspdf'
 import { supabase } from '@/lib/supabase'
+import { renderOrderSlipsPdf } from '@/components/admin/OrderSlipsDocument'
 import type { Layer, Ingredient } from '@/types'
 import { getNextDeliveryDay, formatDate, isDeliverableDate } from '@/utils/dateUtils'
 import DatePicker from '@/components/DatePicker'
@@ -144,104 +144,31 @@ export default function OrderSlipsTab() {
     return sorted
   }
 
-  function generatePdf() {
+  const slipsDataForPdf = useMemo(() => {
+    return flatOrdersForPdf.map(order => ({
+      order: {
+        id: order.id,
+        delivery_date: order.delivery_date,
+        room: order.room,
+        allergies: order.allergies,
+        customers: order.customers,
+      },
+      layers: getOrderLayers(order).map(({ layerName, items }) => ({
+        layerName,
+        items,
+      })),
+    }))
+  }, [flatOrdersForPdf, basisLabel])
+
+  async function generatePdf() {
     if (flatOrdersForPdf.length === 0) return
-    const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' })
-    const pageW = doc.getPageWidth()
-    const pageH = doc.getPageHeight()
-    const margin = 18
-    const contentW = pageW - 2 * margin
-    const contentH = pageH - 2 * margin
-    const slipsPerPage = 3
-    const slipW = contentW / slipsPerPage
-    const slipH = contentH
-    const pad = 12
-    const innerW = slipW - 2 * pad
-    const lineHeight = 11
-    const lineHeightSection = 13
-    const fontSize = 9
-    const fontSizeHead = 10
-    const fontSizeTitle = 12
-    const headerFill: [number, number, number] = [248, 248, 250]
-    const sectionGap = 8
-
-    const drawCutLines = (y0: number, y1: number) => {
-      doc.setLineDashPattern([4, 4], 0)
-      doc.setDrawColor(160, 160, 160)
-      for (let i = 1; i < slipsPerPage; i++) {
-        const x = margin + i * slipW
-        doc.line(x, y0, x, y1)
-      }
-      doc.setLineDashPattern([], 0)
-      doc.setDrawColor(0, 0, 0)
-    }
-
-    const totalPages = Math.ceil(flatOrdersForPdf.length / slipsPerPage)
-
-    for (let p = 0; p < totalPages; p++) {
-      if (p > 0) doc.addPage('a4', 'l')
-      const y0 = margin
-      const y1 = margin + slipH
-      drawCutLines(y0, y1)
-
-      for (let col = 0; col < slipsPerPage; col++) {
-        const orderIndex = p * slipsPerPage + col
-        if (orderIndex >= flatOrdersForPdf.length) break
-        const order = flatOrdersForPdf[orderIndex]
-        const x = margin + col * slipW
-        const slipX = x + pad
-        let slipY = y0 + pad
-        const slipBottom = y0 + slipH - pad
-
-        doc.setDrawColor(0, 0, 0)
-        doc.rect(x, y0, slipW, slipH)
-
-        const maxTextW = innerW
-
-        // —— Kopf: Wer, Wann, Klasse, Allergien (umrandeter Block)
-        const headerH = 54
-        const headerTop = slipY
-        doc.setFillColor(...headerFill)
-        doc.rect(slipX - 2, headerTop - 2, innerW + 4, headerH + 4)
-        doc.setDrawColor(200, 200, 200)
-        doc.rect(slipX - 2, headerTop - 2, innerW + 4, headerH + 4)
-        doc.setDrawColor(0, 0, 0)
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(fontSizeTitle)
-        const name = (order.customers?.name ?? '?').slice(0, 28)
-        doc.text(name, slipX, headerTop + 10)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(fontSizeHead)
-        doc.text(`Datum: ${formatDate(order.delivery_date)}`, slipX, headerTop + 22)
-        doc.text(`Klasse / Raum: ${(order.room ?? '—').trim() || '—'}`, slipX, headerTop + 34)
-        doc.text(`Allergien: ${order.allergies?.trim() || '—'}`, slipX, headerTop + 46)
-        slipY = headerTop + headerH + sectionGap
-
-        // —— Ebenen: Basis, dann weitere (visuell getrennt)
-        const layers = getOrderLayers(order)
-        for (const block of layers) {
-          if (slipY > slipBottom - 20) break
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(fontSizeHead)
-          doc.setDrawColor(0, 0, 0)
-          doc.text(block.layerName, slipX, slipY + 2)
-          slipY += lineHeightSection - 2
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(fontSize)
-          const text = block.items.join(', ')
-          const lines = doc.splitTextToSize(text, maxTextW)
-          doc.text(lines, slipX, slipY + 2)
-          slipY += lines.length * lineHeight + 4
-          doc.setDrawColor(220, 220, 220)
-          doc.line(slipX, slipY, slipX + innerW, slipY)
-          doc.setDrawColor(0, 0, 0)
-          slipY += sectionGap
-        }
-      }
-    }
-
-    doc.save(`Bestellzettel_${deliveryDate || 'Datum'}.pdf`)
+    const blob = await renderOrderSlipsPdf(slipsDataForPdf, formatDate)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Bestellzettel_${deliveryDate || 'Datum'}.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   if (loading) return <p className="text-muted-foreground">Lade …</p>

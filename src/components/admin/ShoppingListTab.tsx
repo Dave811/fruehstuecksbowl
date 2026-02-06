@@ -6,6 +6,7 @@ import DatePicker from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { renderShoppingListPdf } from '@/components/admin/ShoppingListDocument'
 
 type OrderItemRow = { ingredient_id: string; quantity: number }
 type Agg = { count: number; ingredient: Ingredient }
@@ -83,13 +84,32 @@ export default function ShoppingListTab() {
     return { count, portion, unit, total, packages: null, pkgLabel: null, name: ingredient.name }
   })
 
+  const linesForPdf = lines.map(({ count, portion, unit, name, packages, pkgLabel }) => ({
+    count,
+    portion,
+    unit,
+    name,
+    packages,
+    pkgLabel,
+  }))
+
+  async function generatePdf() {
+    const blob = await renderShoppingListPdf(linesForPdf, deliveryDate, formatDate, 'Einkaufsliste')
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Einkaufsliste_${deliveryDate || 'Datum'}.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) return <p className="text-muted-foreground">Lade …</p>
 
   return (
     <Card className="mb-4">
       <CardHeader>
         <CardTitle>Einkaufsliste</CardTitle>
-        <p className="text-muted-foreground text-sm font-normal">Für den gewählten Liefermontag. Drucken mit Browser-Druck (Strg+P).</p>
+        <p className="text-muted-foreground text-sm font-normal">Für den gewählten Liefertermin. PDF: normales A4 mit Abkreuzliste. Drucken: Browser (Strg+P).</p>
         <div className="space-y-2 print:hidden">
           <Label>Lieferdatum</Label>
           <DatePicker
@@ -110,9 +130,14 @@ export default function ShoppingListTab() {
             </p>
           )}
         </div>
-        <Button type="button" className="print:hidden min-h-[48px] mb-4" onClick={() => window.print()}>
-          Drucken
-        </Button>
+        <div className="print:hidden flex flex-wrap gap-2 mb-4">
+          <Button type="button" className="min-h-[48px]" onClick={generatePdf}>
+            PDF erstellen
+          </Button>
+          <Button type="button" variant="outline" className="min-h-[48px]" onClick={() => window.print()}>
+            Drucken
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <ul className="list-disc pl-5 space-y-1">
