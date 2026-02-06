@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { GripVertical } from 'lucide-react'
+import { Sketch } from '@uiw/react-color'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 const SELECTION_OPTIONS = [
   { value: 'none', label: 'Keine' },
@@ -16,6 +18,24 @@ const SELECTION_OPTIONS = [
 ] as const
 
 const selectClass = 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[48px]'
+
+const DEFAULT_ICON_COLOR = '#8db600'
+
+function getIconUrlColor(url: string): string {
+  if (!url?.trim()) return DEFAULT_ICON_COLOR
+  const m = url.match(/[?&]color=([0-9a-fA-F]{3,6})/)
+  if (!m) return DEFAULT_ICON_COLOR
+  const hex = m[1]
+  return '#' + (hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex)
+}
+
+function setIconUrlColor(url: string, hex: string): string {
+  const value = hex.replace(/^#/, '')
+  if (!url?.trim()) return url
+  const without = url.replace(/[?&]color=[0-9a-fA-F]{3,6}/gi, '').replace(/\?&/, '?').replace(/\?$/, '')
+  const sep = without.includes('?') ? '&' : '?'
+  return without + sep + 'color=' + value
+}
 
 const emptyIngredientForm = {
   name: '',
@@ -258,8 +278,36 @@ export default function IngredientsTab() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Icon (URL)</Label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Label className="mb-0">Icon (URL)</Label>
+                  <Button type="button" variant="outline" size="sm" className="shrink-0" asChild>
+                    <a href="https://icons8.com/icons" target="_blank" rel="noopener noreferrer" title="Icons8: Icon wählen, dann Bildadresse kopieren und hier einfügen">
+                      Icon suchen (Icons8)
+                    </a>
+                  </Button>
+                </div>
                 <Input value={layerForm.icon_url} onChange={e => setLayerForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="https://…" className="min-h-[44px]" />
+                {layerForm.icon_url.trim() && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground mb-0">Icon-Farbe</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="h-9 w-14 rounded border border-input cursor-pointer shrink-0"
+                          style={{ backgroundColor: getIconUrlColor(layerForm.icon_url) }}
+                          title="Farbe des Icons (Icons8)"
+                        />
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2" align="start">
+                        <Sketch
+                          color={getIconUrlColor(layerForm.icon_url)}
+                          onChange={(color) => setLayerForm(f => ({ ...f, icon_url: setIconUrlColor(f.icon_url, color.hex) }))}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button type="button" onClick={() => { saveLayer(); }}>Speichern</Button>
@@ -294,8 +342,36 @@ export default function IngredientsTab() {
             </div>
             <div className="flex flex-wrap gap-4">
               <div className="space-y-2">
-                <Label className="mb-0">Icon (URL)</Label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Label className="mb-0">Icon (URL)</Label>
+                  <Button type="button" variant="outline" size="sm" className="shrink-0" asChild>
+                    <a href="https://icons8.com/icons" target="_blank" rel="noopener noreferrer" title="Icons8: Icon wählen, dann Bildadresse kopieren und hier einfügen">
+                      Icon suchen (Icons8)
+                    </a>
+                  </Button>
+                </div>
                 <Input value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="https://…" className="min-h-[44px]" />
+                {form.icon_url.trim() && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground mb-0">Icon-Farbe</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="h-9 w-14 rounded border border-input cursor-pointer shrink-0"
+                          style={{ backgroundColor: getIconUrlColor(form.icon_url) }}
+                          title="Farbe des Icons (Icons8)"
+                        />
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2" align="start">
+                        <Sketch
+                          color={getIconUrlColor(form.icon_url)}
+                          onChange={(color) => setForm(f => ({ ...f, icon_url: setIconUrlColor(f.icon_url, color.hex) }))}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
               {form.icon_url.trim() && <img src={form.icon_url.trim()} alt="" className="h-10 w-10 object-contain rounded border" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
             </div>

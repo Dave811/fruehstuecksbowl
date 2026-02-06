@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { Sketch } from '@uiw/react-color'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 const SELECTION_OPTIONS = [
   { value: 'none', label: 'Keine' },
@@ -15,6 +17,24 @@ const SELECTION_OPTIONS = [
 ] as const
 
 const selectClass = 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[48px]'
+
+const DEFAULT_ICON_COLOR = '#8db600'
+
+function getIconUrlColor(url: string): string {
+  if (!url?.trim()) return DEFAULT_ICON_COLOR
+  const m = url.match(/[?&]color=([0-9a-fA-F]{3,6})/)
+  if (!m) return DEFAULT_ICON_COLOR
+  const hex = m[1]
+  return '#' + (hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex)
+}
+
+function setIconUrlColor(url: string, hex: string): string {
+  const value = hex.replace(/^#/, '')
+  if (!url?.trim()) return url
+  const without = url.replace(/[?&]color=[0-9a-fA-F]{3,6}/gi, '').replace(/\?&/, '?').replace(/\?$/, '')
+  const sep = without.includes('?') ? '&' : '?'
+  return without + sep + 'color=' + value
+}
 
 export default function LayersTab() {
   const [layers, setLayers] = useState<Layer[]>([])
@@ -98,7 +118,28 @@ export default function LayersTab() {
             </div>
             <Input className="min-h-[48px]" value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="https://… oder leer lassen" />
             {form.icon_url.trim() && (
-              <img src={form.icon_url.trim()} alt="" className="h-10 w-10 object-contain rounded border border-border" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              <>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-muted-foreground mb-0">Icon-Farbe</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="h-9 w-14 rounded border border-input cursor-pointer shrink-0"
+                        style={{ backgroundColor: getIconUrlColor(form.icon_url) }}
+                        title="Farbe des Icons (Icons8)"
+                      />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-2" align="start">
+                      <Sketch
+                        color={getIconUrlColor(form.icon_url)}
+                        onChange={(color) => setForm(f => ({ ...f, icon_url: setIconUrlColor(f.icon_url, color.hex) }))}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <img src={form.icon_url.trim()} alt="" className="h-10 w-10 object-contain rounded border border-border" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              </>
             )}
           </div>
           <div className="flex gap-2">
