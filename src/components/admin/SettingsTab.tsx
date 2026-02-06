@@ -33,6 +33,7 @@ export default function SettingsTab() {
   const [hour, setHour] = useState(16)
   const [minute, setMinute] = useState(0)
   const [pausedDates, setPausedDates] = useState('')
+  const [mehrfachPortionFaktor, setMehrfachPortionFaktor] = useState(50)
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
 
@@ -51,6 +52,8 @@ export default function SettingsTab() {
       setHour(parseInt(m.order_cutoff_hour ?? '16', 10))
       setMinute(parseInt(m.order_cutoff_minute ?? '0', 10))
       setPausedDates(m.paused_delivery_dates ?? '')
+      const f = parseFloat(m.mehrfach_portion_faktor ?? '0.5')
+      setMehrfachPortionFaktor(Number.isNaN(f) ? 50 : Math.round(f * 100))
       setLoading(false)
     }
     load()
@@ -63,6 +66,7 @@ export default function SettingsTab() {
       { key: 'order_cutoff_hour', value: String(hour) },
       { key: 'order_cutoff_minute', value: String(minute) },
       { key: 'paused_delivery_dates', value: pausedDates.trim() },
+      { key: 'mehrfach_portion_faktor', value: String(mehrfachPortionFaktor / 100) },
     ], { onConflict: 'key' })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -135,6 +139,20 @@ export default function SettingsTab() {
               />
             </div>
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="mehrfach-faktor">Mehrfachauswahl: Faktor für Zusatzportionen (%)</Label>
+          <input
+            id="mehrfach-faktor"
+            type="number"
+            min={0}
+            max={100}
+            step={5}
+            className={cn(inputLikeClass, 'min-h-[48px] w-24')}
+            value={mehrfachPortionFaktor}
+            onChange={e => setMehrfachPortionFaktor(Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0)))}
+          />
+          <p className="text-muted-foreground text-xs">Erste Portion = 100 %, jede weitere zählt mit diesem Faktor (Standard 50 %). Für die Einkaufsliste.</p>
         </div>
         <div className="space-y-2">
           <Label>Pausierte Liefertage</Label>

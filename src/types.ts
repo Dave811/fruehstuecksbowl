@@ -20,6 +20,9 @@ export interface Ingredient {
   package_unit: string | null
   package_label: string | null
   icon_url?: string | null
+  allow_delete?: boolean
+  allow_add_more?: boolean
+  max_quantity?: number | null
 }
 
 export interface Customer {

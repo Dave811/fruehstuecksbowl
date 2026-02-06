@@ -24,6 +24,9 @@ export default function IngredientsTab() {
     package_unit: '',
     package_label: '',
     icon_url: '',
+    allow_delete: false,
+    allow_add_more: false,
+    max_quantity: '' as number | '',
   })
 
   useEffect(() => { load() }, [])
@@ -49,6 +52,9 @@ export default function IngredientsTab() {
       package_unit: form.package_unit || null,
       package_label: form.package_label || null,
       icon_url: form.icon_url.trim() || null,
+      allow_delete: form.allow_delete,
+      allow_add_more: form.allow_add_more,
+      max_quantity: form.max_quantity === '' ? null : (Number(form.max_quantity) || null),
     }
     if (editing?.id) {
       await supabase.from('ingredients').update(payload).eq('id', editing.id)
@@ -57,7 +63,7 @@ export default function IngredientsTab() {
       await supabase.from('ingredients').insert(payload)
     }
     setEditing(null)
-    setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '', icon_url: '' })
+    setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '', icon_url: '', allow_delete: false, allow_add_more: false, max_quantity: '' })
     load()
   }
 
@@ -79,6 +85,9 @@ export default function IngredientsTab() {
       package_unit: i.package_unit ?? '',
       package_label: i.package_label ?? '',
       icon_url: i.icon_url ?? '',
+      allow_delete: i.allow_delete ?? false,
+      allow_add_more: i.allow_add_more ?? false,
+      max_quantity: i.max_quantity ?? '',
     })
   }
 
@@ -120,6 +129,28 @@ export default function IngredientsTab() {
               <img src={form.icon_url.trim()} alt="" className="h-10 w-10 object-contain rounded border border-border" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
             )}
           </div>
+          <div className="flex flex-wrap gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form.allow_delete} onChange={e => setForm(f => ({ ...f, allow_delete: e.target.checked }))} className="w-4 h-4 rounded border-input" />
+              <span className="text-sm">Button „Entfernen“ in der Bestellung anzeigen</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form.allow_add_more} onChange={e => setForm(f => ({ ...f, allow_add_more: e.target.checked }))} className="w-4 h-4 rounded border-input" />
+              <span className="text-sm">Button „Mehr“ in der Bestellung anzeigen (bei Mehrfachauswahl)</span>
+            </label>
+            <div className="space-y-2">
+              <Label>Max. Anzahl (Mehrfachauswahl)</Label>
+              <Input
+                type="number"
+                min={1}
+                className="min-h-[48px] w-24"
+                value={form.max_quantity}
+                onChange={e => setForm(f => ({ ...f, max_quantity: e.target.value === '' ? '' : Number(e.target.value) }))}
+                placeholder="unbegrenzt"
+              />
+              <p className="text-muted-foreground text-xs">Leer = unbegrenzt. Maximale Anzahl, die Kunden für diese Zutat wählen können.</p>
+            </div>
+          </div>
           <details className="space-y-4">
             <summary className="cursor-pointer font-medium text-muted-foreground">Einkaufsliste (Portion / Packung)</summary>
             <div className="mt-2 space-y-4 pl-2">
@@ -143,7 +174,7 @@ export default function IngredientsTab() {
           </details>
           <div className="flex gap-2">
             <Button type="submit" className="min-h-[48px]">{editing ? 'Speichern' : 'Hinzufügen'}</Button>
-            {editing && <Button type="button" variant="outline" onClick={() => { setEditing(null); setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '', icon_url: '' }); }}>Abbrechen</Button>}
+            {editing && <Button type="button" variant="outline" onClick={() => { setEditing(null); setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '', icon_url: '', allow_delete: false, allow_add_more: false, max_quantity: '' }); }}>Abbrechen</Button>}
           </div>
         </form>
         <ul className="list-none p-0 border-t border-border pt-4 space-y-2">
@@ -153,7 +184,10 @@ export default function IngredientsTab() {
               <li key={i.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <span className="text-foreground flex items-center gap-2">
                   {i.icon_url && <img src={i.icon_url} alt="" className="h-6 w-6 object-contain rounded" />}
-                  <strong>{i.name}</strong> ({layerName}) {i.portion_amount != null && <small className="text-muted-foreground">{i.portion_amount}{i.portion_unit} → {i.package_amount}{i.package_unit ?? ''} {i.package_label}</small>}</span>
+                  <strong>{i.name}</strong> ({layerName})
+                  {(i.allow_delete || i.allow_add_more) && <span className="text-muted-foreground text-xs">Entfernen: {i.allow_delete ? 'ja' : 'nein'}, Mehr: {i.allow_add_more ? 'ja' : 'nein'}</span>}
+                  {i.max_quantity != null && <span className="text-muted-foreground text-xs"> · Max: {i.max_quantity}</span>}
+                  {i.portion_amount != null && <small className="text-muted-foreground">{i.portion_amount}{i.portion_unit} → {i.package_amount}{i.package_unit ?? ''} {i.package_label}</small>}</span>
                 <span className="flex gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => startEdit(i)}>Bearbeiten</Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => remove(i.id)}>Löschen</Button>

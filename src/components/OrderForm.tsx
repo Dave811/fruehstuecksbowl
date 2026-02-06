@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input'
 const INFO_TEXT = 'Du nimmst heute mit deiner Bowl u. a. Eiweiß, Ballaststoffe und Superfoods zu dir (z. B. ca. 33 % Eiweiß).'
 
 type SelectionState = Record<string, string[]>
-type QuantityState = Record<string, Record<string, number>>
 
 interface OrderFormProps {
   customerId: string
@@ -30,7 +29,6 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
   const [room, setRoom] = useState('')
   const [allergies, setAllergies] = useState('')
   const [selection, setSelection] = useState<SelectionState>({})
-  const [quantity, setQuantity] = useState<QuantityState>({})
 
   useEffect(() => {
     async function load() {
@@ -76,22 +74,19 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
       const { data: items } = await supabase.from('order_items').select('ingredient_id, quantity').eq('order_id', (order as { id: string }).id)
       if (!items?.length) return
       const sel: SelectionState = {}
-      const qty: QuantityState = {}
       for (const it of items as { ingredient_id: string; quantity: number }[]) {
         const ing = ingredients.find(i => i.id === it.ingredient_id)
         if (!ing) continue
         const layer = layers.find(l => l.id === ing.layer_id)
         if (!layer) continue
-        if (layer.selection_type === 'single' || layer.selection_type === 'multiple') {
+        if (layer.selection_type === 'single') {
+          sel[layer.id] = [it.ingredient_id]
+        } else if ((layer.selection_type === 'multiple' || layer.selection_type === 'quantity') && it.quantity > 0) {
           if (!sel[layer.id]) sel[layer.id] = []
-          sel[layer.id].push(it.ingredient_id)
-        } else if (layer.selection_type === 'quantity' && it.quantity > 0) {
-          if (!qty[layer.id]) qty[layer.id] = {}
-          qty[layer.id][it.ingredient_id] = it.quantity
+          for (let q = 0; q < it.quantity; q++) sel[layer.id].push(it.ingredient_id)
         }
       }
       setSelection(s => ({ ...s, ...sel }))
-      setQuantity(q => ({ ...q, ...qty }))
     }
     loadOrder()
   }, [customerId, deliveryDate, ingredients.length, layers.length])
@@ -101,21 +96,22 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
   const layersForDisplay = layers.filter(l => l.selection_type !== 'none')
   const getIngredientsForLayer = (layerId: string) => ingredients.filter(i => i.layer_id === layerId)
 
-  function setLayerSelection(layerId: string, type: string, value: string | string[] | number | [string, number]) {
+  function setLayerSelection(layerId: string, type: string, value: string | { op: 'add' | 'removeOne' | 'removeAll'; ingId: string }) {
     if (type === 'single') {
       setSelection(s => ({ ...s, [layerId]: value ? [value as string] : [] }))
     } else if (type === 'multiple') {
+      const v = value as { op: 'add' | 'removeOne' | 'removeAll'; ingId: string }
       setSelection(s => {
         const arr = (s[layerId] ?? []).slice()
-        const v = value as string
-        const i = arr.indexOf(v)
-        if (i >= 0) arr.splice(i, 1)
-        else arr.push(v)
+        if (v.op === 'add') arr.push(v.ingId)
+        else if (v.op === 'removeAll') return { ...s, [layerId]: arr.filter(id => id !== v.ingId) }
+        else if (v.op === 'removeOne') {
+          const i = arr.indexOf(v.ingId)
+          if (i >= 0) arr.splice(i, 1)
+          return { ...s, [layerId]: arr }
+        }
         return { ...s, [layerId]: arr }
       })
-    } else if (type === 'quantity') {
-      const [ingId, q] = value as [string, number]
-      setQuantity(qty => ({ ...qty, [layerId]: { ...(qty[layerId] ?? {}), [ingId]: q } }))
     }
   }
 
@@ -145,15 +141,13 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
     await supabase.from('order_items').delete().eq('order_id', orderId)
     const items: { order_id: string; ingredient_id: string; quantity: number }[] = []
     for (const layer of layersSelectable) {
-      const ings = getIngredientsForLayer(layer.id)
-      if (layer.selection_type === 'single' || layer.selection_type === 'multiple') {
+      if (layer.selection_type === 'single') {
         for (const id of selection[layer.id] ?? []) items.push({ order_id: orderId, ingredient_id: id, quantity: 1 })
-      } else if (layer.selection_type === 'quantity') {
-        const qMap = quantity[layer.id] ?? {}
-        for (const ing of ings) {
-          const q = qMap[ing.id] ?? 0
-          if (q > 0) items.push({ order_id: orderId, ingredient_id: ing.id, quantity: q })
-        }
+      } else if (layer.selection_type === 'multiple' || layer.selection_type === 'quantity') {
+        const arr = selection[layer.id] ?? []
+        const counts: Record<string, number> = {}
+        for (const id of arr) counts[id] = (counts[id] ?? 0) + 1
+        for (const [id, q] of Object.entries(counts)) items.push({ order_id: orderId, ingredient_id: id, quantity: q })
       }
     }
     if (items.length) await supabase.from('order_items').insert(items)
@@ -170,15 +164,17 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
       const items: string[] = []
       if (layer.selection_type === 'display_only') {
         items.push(...ings.map(i => i.name))
-      } else if (layer.selection_type === 'single' || layer.selection_type === 'multiple') {
+      } else if (layer.selection_type === 'single') {
         for (const id of selection[layer.id] ?? []) {
           const ing = ings.find(i => i.id === id)
           if (ing) items.push(ing.name)
         }
-      } else if (layer.selection_type === 'quantity') {
-        const qMap = quantity[layer.id] ?? {}
+      } else if (layer.selection_type === 'multiple' || layer.selection_type === 'quantity') {
+        const arr = selection[layer.id] ?? []
+        const counts: Record<string, number> = {}
+        for (const id of arr) counts[id] = (counts[id] ?? 0) + 1
         for (const ing of ings) {
-          const q = qMap[ing.id] ?? 0
+          const q = counts[ing.id] ?? 0
           if (q > 0) items.push(q > 1 ? `${ing.name} ${q}x` : ing.name)
         }
       }
@@ -311,53 +307,82 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
                 </Label>
                 {layer.selection_type === 'single' && (
                   <div className="flex flex-col gap-1">
-                    {ings.map(ing => (
-                      <label key={ing.id} className="flex items-center gap-2 min-h-[44px] cursor-pointer">
-                        <input type="radio" name={layer.id} value={ing.id} checked={(selection[layer.id] ?? []).includes(ing.id)} onChange={() => setLayerSelection(layer.id, 'single', ing.id)} className="w-4 h-4" />
-                        {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain shrink-0" />}
-                        <span>{ing.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-                {layer.selection_type === 'multiple' && (
-                  <div className="flex flex-col gap-1">
-                    {ings.map(ing => (
-                      <label key={ing.id} className="flex items-center gap-2 min-h-[44px] cursor-pointer">
-                        <input type="checkbox" value={ing.id} checked={(selection[layer.id] ?? []).includes(ing.id)} onChange={() => setLayerSelection(layer.id, 'multiple', ing.id)} className="w-4 h-4 rounded" />
-                        {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain shrink-0" />}
-                        <span>{ing.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-                {layer.selection_type === 'quantity' && layer.quantity_options != null && layer.quantity_options !== '' && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {ings.map(ing => (
-                      <div key={ing.id} className="flex items-center gap-2 mb-2">
-                        {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain shrink-0" />}
-                        <span className="text-foreground">{ing.name}:</span>
-                        {(layer.quantity_options as string).split(',').map(s => {
-                          const n = parseInt(s.trim(), 10)
-                          if (isNaN(n)) return null
-                          const qMap = quantity[layer.id] ?? {}
-                          const current = qMap[ing.id] ?? 0
-                          const isActive = current === n
-                          return (
-                            <Button
-                              key={n}
-                              type="button"
-                              variant={isActive ? 'default' : 'outline'}
-                              size="sm"
-                              className="min-h-[44px]"
-                              onClick={() => setLayerSelection(layer.id, 'quantity', [ing.id, n] as [string, number])}
-                            >
-                              {String(n)}
+                    {ings.map(ing => {
+                      const isSelected = (selection[layer.id] ?? []).includes(ing.id)
+                      return (
+                        <div key={ing.id} className="flex items-center gap-2 min-h-[44px] flex-wrap">
+                          <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                            <input type="radio" name={layer.id} value={ing.id} checked={isSelected} onChange={() => setLayerSelection(layer.id, 'single', ing.id)} className="w-4 h-4" />
+                            {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain shrink-0" />}
+                            <span>{ing.name}</span>
+                          </label>
+                          {isSelected && ing.allow_delete && (
+                            <Button type="button" variant="outline" size="sm" onClick={() => setLayerSelection(layer.id, 'single', '')}>
+                              Entfernen
                             </Button>
-                          )
-                        })}
-                      </div>
-                    ))}
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {(layer.selection_type === 'multiple' || layer.selection_type === 'quantity') && (
+                  <div className="flex flex-col gap-1">
+                    {ings.map(ing => {
+                      const arr = selection[layer.id] ?? []
+                      const count = arr.filter(id => id === ing.id).length
+                      const maxQ = ing.max_quantity ?? 999
+                      const atMax = count >= maxQ
+                      const showDelete = (ing.allow_delete ?? true) && count > 0
+                      const showMore = (ing.allow_add_more ?? true)
+                      return (
+                        <div key={ing.id} className="flex items-center gap-2 min-h-[44px] flex-wrap">
+                          <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0 shrink">
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded border-input"
+                              checked={count > 0}
+                              onChange={() => {
+                                if (count > 0) setLayerSelection(layer.id, 'multiple', { op: 'removeAll', ingId: ing.id })
+                                else setLayerSelection(layer.id, 'multiple', { op: 'add', ingId: ing.id })
+                              }}
+                            />
+                            {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain shrink-0" />}
+                            <span className="text-foreground">{ing.name}</span>
+                          </label>
+                          <div className="flex items-center gap-0 border border-input rounded-md overflow-hidden bg-background">
+                            {showDelete && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9 w-9 rounded-none border-0 border-r border-input"
+                                onClick={() => setLayerSelection(layer.id, 'multiple', count === 1 ? { op: 'removeAll', ingId: ing.id } : { op: 'removeOne', ingId: ing.id })}
+                                title="Löschen / weniger"
+                              >
+                                −
+                              </Button>
+                            )}
+                            <span className="min-w-[2rem] text-center py-1.5 text-sm font-medium" aria-live="polite">
+                              {count}
+                            </span>
+                            {showMore && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9 w-9 rounded-none border-0 border-l border-input"
+                                onClick={() => setLayerSelection(layer.id, 'multiple', { op: 'add', ingId: ing.id })}
+                                title="Mehr"
+                                disabled={atMax}
+                              >
+                                +
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

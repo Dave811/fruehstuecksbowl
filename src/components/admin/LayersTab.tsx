@@ -10,9 +10,8 @@ import { cn } from '@/lib/utils'
 const SELECTION_OPTIONS = [
   { value: 'none', label: 'Keine' },
   { value: 'display_only', label: 'Nur Anzeige (feste Basis)' },
-  { value: 'single', label: 'Normal (einfach)' },
-  { value: 'multiple', label: 'Normal: mehr' },
-  { value: 'quantity', label: 'Menge (1,2,3 …)' },
+  { value: 'single', label: 'Einfach Auswahl' },
+  { value: 'multiple', label: 'Mehrfachauswahl' },
 ] as const
 
 const selectClass = 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[48px]'
@@ -88,12 +87,6 @@ export default function LayersTab() {
               {SELECTION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-          {form.selection_type === 'quantity' && (
-            <div className="space-y-2">
-              <Label>Mengenoptionen (z. B. 1,2,3)</Label>
-              <Input className="min-h-[48px]" value={form.quantity_options} onChange={e => setForm(f => ({ ...f, quantity_options: e.target.value }))} placeholder="1,2,3" />
-            </div>
-          )}
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <Label className="mb-0">Icon / Bild (URL)</Label>
@@ -118,7 +111,7 @@ export default function LayersTab() {
             <li key={l.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
               <span className="text-foreground flex items-center gap-2">
                 {l.icon_url && <img src={l.icon_url} alt="" className="h-6 w-6 object-contain rounded" />}
-                <strong>{l.name}</strong> (Reihe {l.sort_order}, {SELECTION_OPTIONS.find(o => o.value === l.selection_type)?.label ?? l.selection_type}{l.quantity_options ? `: ${l.quantity_options}` : ''})</span>
+                <strong>{l.name}</strong> (Reihe {l.sort_order}, {SELECTION_OPTIONS.find(o => o.value === l.selection_type)?.label ?? l.selection_type})</span>
               <span className="flex gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => startEdit(l)}>Bearbeiten</Button>
                 <Button type="button" variant="outline" size="sm" onClick={() => remove(l.id)}>Löschen</Button>

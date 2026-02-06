@@ -15,6 +15,7 @@ export default function ShoppingListTab() {
   const [pausedDeliveryDates, setPausedDeliveryDates] = useState<string[]>([])
   const [items, setItems] = useState<OrderItemRow[]>([])
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
+  const [mehrfachFaktor, setMehrfachFaktor] = useState(0.5)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -23,6 +24,8 @@ export default function ShoppingListTab() {
       const { data } = await supabase.from('app_settings').select('key, value')
       const m: Record<string, string> = {}
       for (const row of data ?? []) m[row.key] = row.value ?? ''
+      const f = parseFloat(m.mehrfach_portion_faktor ?? '0.5')
+      if (!cancelled && !Number.isNaN(f)) setMehrfachFaktor(Math.max(0, Math.min(1, f)))
       const weekday = parseInt(m.delivery_weekday ?? '0', 10)
       const paused = (m.paused_delivery_dates ?? '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
       const next = getNextDeliveryDay(weekday, paused)
@@ -62,7 +65,8 @@ export default function ShoppingListTab() {
   const aggregated: Agg[] = []
   const byIng = new Map<string, number>()
   for (const it of items) {
-    byIng.set(it.ingredient_id, (byIng.get(it.ingredient_id) ?? 0) + it.quantity)
+    const effective = it.quantity <= 0 ? 0 : 1 + (it.quantity - 1) * mehrfachFaktor
+    byIng.set(it.ingredient_id, (byIng.get(it.ingredient_id) ?? 0) + effective)
   }
   for (const [ingredientId, count] of byIng) {
     const ing = ingredients.find(i => i.id === ingredientId)
