@@ -6,28 +6,52 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { GripVertical } from 'lucide-react'
+
+const SELECTION_OPTIONS = [
+  { value: 'none', label: 'Keine' },
+  { value: 'display_only', label: 'Nur Anzeige (feste Basis)' },
+  { value: 'single', label: 'Einfach Auswahl' },
+  { value: 'multiple', label: 'Mehrfachauswahl' },
+] as const
 
 const selectClass = 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[48px]'
+
+const emptyIngredientForm = {
+  name: '',
+  layer_id: '',
+  sort_order: 0,
+  portion_amount: '' as number | '',
+  portion_unit: '',
+  package_amount: '' as number | '',
+  package_unit: '',
+  package_label: '',
+  icon_url: '',
+  allow_delete: false,
+  allow_add_more: false,
+  max_quantity: '' as number | '',
+}
+
+const emptyLayerForm = {
+  name: '',
+  sort_order: 0,
+  selection_type: 'single' as Layer['selection_type'],
+  quantity_options: '',
+  icon_url: '',
+}
 
 export default function IngredientsTab() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [layers, setLayers] = useState<Layer[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Ingredient> | null>(null)
-  const [form, setForm] = useState({
-    name: '',
-    layer_id: '',
-    sort_order: 0,
-    portion_amount: '' as number | '',
-    portion_unit: '',
-    package_amount: '' as number | '',
-    package_unit: '',
-    package_label: '',
-    icon_url: '',
-    allow_delete: false,
-    allow_add_more: false,
-    max_quantity: '' as number | '',
-  })
+  const [form, setForm] = useState(emptyIngredientForm)
+  const [editingLayer, setEditingLayer] = useState<Partial<Layer> | null>(null)
+  const [addingLayer, setAddingLayer] = useState(false)
+  const [layerForm, setLayerForm] = useState(emptyLayerForm)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [dragOverLayerId, setDragOverLayerId] = useState<string | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -41,7 +65,26 @@ export default function IngredientsTab() {
     setLoading(false)
   }
 
-  async function save() {
+  function getIngredientsByLayer(layerId: string): Ingredient[] {
+    return ingredients.filter(i => i.layer_id === layerId).sort((a, b) => a.sort_order - b.sort_order)
+  }
+
+  function getNextSortOrderForLayer(layerId: string): number {
+    const ings = getIngredientsByLayer(layerId)
+    if (ings.length === 0) return 0
+    return Math.max(...ings.map(i => i.sort_order), -1) + 1
+  }
+
+  function startAddForLayer(layerId: string) {
+    setEditing(null)
+    setForm({
+      ...emptyIngredientForm,
+      layer_id: layerId,
+      sort_order: getNextSortOrderForLayer(layerId),
+    })
+  }
+
+  async function saveIngredient() {
     const payload = {
       name: form.name,
       layer_id: form.layer_id || undefined,
@@ -63,17 +106,43 @@ export default function IngredientsTab() {
       await supabase.from('ingredients').insert(payload)
     }
     setEditing(null)
-    setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '', icon_url: '', allow_delete: false, allow_add_more: false, max_quantity: '' })
+    setForm({ ...emptyIngredientForm, layer_id: layers[0]?.id ?? '', sort_order: 0 })
     load()
   }
 
-  async function remove(id: string) {
+  async function removeIngredient(id: string) {
     if (!confirm('Zutat löschen?')) return
     await supabase.from('ingredients').delete().eq('id', id)
     load()
   }
 
-  function startEdit(i: Ingredient) {
+  async function handleIngredientDrop(draggedId: string, targetIngId: string, targetLayerId: string) {
+    const dragged = ingredients.find(i => i.id === draggedId)
+    if (!dragged) return
+    if (dragged.layer_id === targetLayerId) {
+      const list = getIngredientsByLayer(targetLayerId)
+      const fromIdx = list.findIndex(i => i.id === draggedId)
+      const toIdx = list.findIndex(i => i.id === targetIngId)
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return
+      const reordered = list.filter(i => i.id !== draggedId)
+      reordered.splice(toIdx, 0, dragged)
+      for (let i = 0; i < reordered.length; i++) {
+        await supabase.from('ingredients').update({ sort_order: i }).eq('id', reordered[i].id)
+      }
+    } else {
+      const newOrder = getNextSortOrderForLayer(targetLayerId)
+      await supabase.from('ingredients').update({ layer_id: targetLayerId, sort_order: newOrder }).eq('id', draggedId)
+    }
+    load()
+  }
+
+  async function handleDropOnLayer(draggedId: string, layerId: string) {
+    const newOrder = getNextSortOrderForLayer(layerId)
+    await supabase.from('ingredients').update({ layer_id: layerId, sort_order: newOrder }).eq('id', draggedId)
+    load()
+  }
+
+  function startEditIngredient(i: Ingredient) {
     setEditing(i)
     setForm({
       name: i.name,
@@ -91,111 +160,245 @@ export default function IngredientsTab() {
     })
   }
 
+  function resetIngredientForm() {
+    setEditing(null)
+    setForm({ ...emptyIngredientForm, layer_id: layers[0]?.id ?? '', sort_order: 0 })
+  }
+
+  // --- Layer ---
+  async function saveLayer() {
+    if (editingLayer?.id) {
+      await supabase.from('layers').update({
+        name: layerForm.name,
+        sort_order: layerForm.sort_order,
+        selection_type: layerForm.selection_type,
+        quantity_options: layerForm.quantity_options || null,
+        icon_url: layerForm.icon_url.trim() || null,
+      }).eq('id', editingLayer.id)
+    } else if (addingLayer) {
+      await supabase.from('layers').insert({
+        name: layerForm.name,
+        sort_order: layerForm.sort_order,
+        selection_type: layerForm.selection_type,
+        quantity_options: layerForm.quantity_options || null,
+        icon_url: layerForm.icon_url.trim() || null,
+      })
+    }
+    setEditingLayer(null)
+    setAddingLayer(false)
+    setLayerForm(emptyLayerForm)
+    load()
+  }
+
+  async function removeLayer(id: string) {
+    if (!confirm('Ebene wirklich löschen? Alle Zutaten der Ebene werden mitgelöscht.')) return
+    await supabase.from('layers').delete().eq('id', id)
+    load()
+  }
+
+  function startEditLayer(l: Layer) {
+    setAddingLayer(false)
+    setEditingLayer(l)
+    setLayerForm({ name: l.name, sort_order: l.sort_order, selection_type: l.selection_type, quantity_options: l.quantity_options ?? '', icon_url: l.icon_url ?? '' })
+  }
+
+  function startAddLayer() {
+    setEditingLayer(null)
+    setAddingLayer(true)
+    setLayerForm({ ...emptyLayerForm, sort_order: layers.length })
+  }
+
+  function resetLayerForm() {
+    setEditingLayer(null)
+    setAddingLayer(false)
+    setLayerForm(emptyLayerForm)
+  }
+
   if (loading) return <p className="text-muted-foreground">Lade …</p>
+
+  const sortedLayers = [...layers].sort((a, b) => a.sort_order - b.sort_order)
 
   return (
     <Card className="mb-4">
       <CardHeader>
-        <CardTitle>Zutaten</CardTitle>
+        <CardTitle>Ebenen & Zutaten</CardTitle>
+        <p className="text-muted-foreground text-sm font-normal">Ebenen bearbeiten, Zutaten pro Ebene hinzufügen und sortieren. Reihenfolge wird beim Hinzufügen automatisch gesetzt.</p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <form onSubmit={e => { e.preventDefault(); save(); }} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input className="min-h-[48px]" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="z. B. Skir" required />
-          </div>
-          <div className="space-y-2">
-            <Label>Ebene</Label>
-            <select className={cn(selectClass)} value={form.layer_id} onChange={e => setForm(f => ({ ...f, layer_id: e.target.value }))} required>
-              <option value="">— wählen —</option>
-              {layers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label>Reihenfolge</Label>
-            <Input type="number" className="min-h-[48px]" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value, 10) || 0 }))} />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Label className="mb-0">Icon / Bild (URL)</Label>
-              <Button type="button" variant="outline" size="sm" className="shrink-0" asChild>
-                <a href="https://icons8.com/icons" target="_blank" rel="noopener noreferrer" title="Icons8: Icon wählen, dann Bildadresse kopieren und hier einfügen">
-                  Icon suchen (Icons8)
-                </a>
-              </Button>
+      <CardContent className="space-y-6">
+        {/* Layer add/edit form */}
+        {(editingLayer || addingLayer) && (
+          <Card className="border-muted bg-muted/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{editingLayer ? 'Ebene bearbeiten' : 'Neue Ebene'}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input value={layerForm.name} onChange={e => setLayerForm(f => ({ ...f, name: e.target.value }))} placeholder="z. B. Sauce" className="min-h-[44px]" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Reihenfolge</Label>
+                  <Input type="number" value={layerForm.sort_order} onChange={e => setLayerForm(f => ({ ...f, sort_order: parseInt(e.target.value, 10) || 0 }))} className="min-h-[44px]" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Auswahlmodus</Label>
+                <select className={cn(selectClass)} value={layerForm.selection_type} onChange={e => setLayerForm(f => ({ ...f, selection_type: e.target.value as Layer['selection_type'] }))}>
+                  {SELECTION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Icon (URL)</Label>
+                <Input value={layerForm.icon_url} onChange={e => setLayerForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="https://…" className="min-h-[44px]" />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" onClick={() => { saveLayer(); }}>Speichern</Button>
+                <Button type="button" variant="outline" onClick={resetLayerForm}>Abbrechen</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Ingredient add/edit form */}
+        <details open={!!editing || (!!form.name && !!form.layer_id)} className="space-y-3">
+          <summary className="cursor-pointer font-medium">
+            {editing ? 'Zutat bearbeiten' : 'Zutat hinzufügen'}
+          </summary>
+          <form onSubmit={e => { e.preventDefault(); saveIngredient(); }} className="space-y-3 pt-2">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="z. B. Skir" required className="min-h-[44px]" />
+              </div>
+              <div className="space-y-2">
+                <Label>Ebene</Label>
+                <select className={cn(selectClass)} value={form.layer_id} onChange={e => setForm(f => ({ ...f, layer_id: e.target.value }))} required>
+                  <option value="">— wählen —</option>
+                  {layers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </div>
             </div>
-            <Input className="min-h-[48px]" value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="https://… oder leer lassen" />
-            {form.icon_url.trim() && (
-              <img src={form.icon_url.trim()} alt="" className="h-10 w-10 object-contain rounded border border-border" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-            )}
-          </div>
-          <div className="flex flex-wrap gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.allow_delete} onChange={e => setForm(f => ({ ...f, allow_delete: e.target.checked }))} className="w-4 h-4 rounded border-input" />
-              <span className="text-sm">Button „Entfernen“ in der Bestellung anzeigen</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.allow_add_more} onChange={e => setForm(f => ({ ...f, allow_add_more: e.target.checked }))} className="w-4 h-4 rounded border-input" />
-              <span className="text-sm">Button „Mehr“ in der Bestellung anzeigen (bei Mehrfachauswahl)</span>
-            </label>
             <div className="space-y-2">
-              <Label>Max. Anzahl (Mehrfachauswahl)</Label>
-              <Input
-                type="number"
-                min={1}
-                className="min-h-[48px] w-24"
-                value={form.max_quantity}
-                onChange={e => setForm(f => ({ ...f, max_quantity: e.target.value === '' ? '' : Number(e.target.value) }))}
-                placeholder="unbegrenzt"
-              />
-              <p className="text-muted-foreground text-xs">Leer = unbegrenzt. Maximale Anzahl, die Kunden für diese Zutat wählen können.</p>
+              <Label className="text-muted-foreground">Reihenfolge (wird beim Hinzufügen automatisch gesetzt)</Label>
+              <Input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value, 10) || 0 }))} className="min-h-[44px] w-24" />
             </div>
-          </div>
-          <details className="space-y-4">
-            <summary className="cursor-pointer font-medium text-muted-foreground">Einkaufsliste (Portion / Packung)</summary>
-            <div className="mt-2 space-y-4 pl-2">
+            <div className="flex flex-wrap gap-4">
               <div className="space-y-2">
-                <Label>Portion (Menge)</Label>
-                <Input type="number" className="min-h-[48px]" value={form.portion_amount} onChange={e => setForm(f => ({ ...f, portion_amount: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="100" />
+                <Label className="mb-0">Icon (URL)</Label>
+                <Input value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="https://…" className="min-h-[44px]" />
               </div>
-              <div className="space-y-2">
-                <Label>Portion (Einheit)</Label>
-                <Input className="min-h-[48px]" value={form.portion_unit} onChange={e => setForm(f => ({ ...f, portion_unit: e.target.value }))} placeholder="g" />
-              </div>
-              <div className="space-y-2">
-                <Label>Packung (Menge)</Label>
-                <Input type="number" className="min-h-[48px]" value={form.package_amount} onChange={e => setForm(f => ({ ...f, package_amount: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="500" />
-              </div>
-              <div className="space-y-2">
-                <Label>Packung (Bezeichnung)</Label>
-                <Input className="min-h-[48px]" value={form.package_label} onChange={e => setForm(f => ({ ...f, package_label: e.target.value }))} placeholder="500g Becher" />
+              {form.icon_url.trim() && <img src={form.icon_url.trim()} alt="" className="h-10 w-10 object-contain rounded border" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.allow_delete} onChange={e => setForm(f => ({ ...f, allow_delete: e.target.checked }))} className="w-4 h-4 rounded border-input" />
+                <span className="text-sm">Button „Entfernen“</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.allow_add_more} onChange={e => setForm(f => ({ ...f, allow_add_more: e.target.checked }))} className="w-4 h-4 rounded border-input" />
+                <span className="text-sm">Button „Mehr“</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <Label className="mb-0 text-sm">Max. Anzahl</Label>
+                <Input type="number" min={1} className="h-9 w-20" value={form.max_quantity} onChange={e => setForm(f => ({ ...f, max_quantity: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="—" />
               </div>
             </div>
-          </details>
-          <div className="flex gap-2">
-            <Button type="submit" className="min-h-[48px]">{editing ? 'Speichern' : 'Hinzufügen'}</Button>
-            {editing && <Button type="button" variant="outline" onClick={() => { setEditing(null); setForm({ name: '', layer_id: layers[0]?.id ?? '', sort_order: 0, portion_amount: '', portion_unit: '', package_amount: '', package_unit: '', package_label: '', icon_url: '', allow_delete: false, allow_add_more: false, max_quantity: '' }); }}>Abbrechen</Button>}
-          </div>
-        </form>
-        <ul className="list-none p-0 border-t border-border pt-4 space-y-2">
-          {ingredients.map(i => {
-            const layerName = layers.find(l => l.id === i.layer_id)?.name ?? '?'
+            <details className="text-sm">
+              <summary className="cursor-pointer text-muted-foreground">Einkaufsliste (Portion / Packung)</summary>
+              <div className="grid gap-2 sm:grid-cols-2 pt-2">
+                <div><Label className="text-xs">Portion</Label><Input value={form.portion_amount} onChange={e => setForm(f => ({ ...f, portion_amount: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="100" className="h-9" /></div>
+                <div><Label className="text-xs">Einheit</Label><Input value={form.portion_unit} onChange={e => setForm(f => ({ ...f, portion_unit: e.target.value }))} placeholder="g" className="h-9" /></div>
+                <div><Label className="text-xs">Packung Menge</Label><Input value={form.package_amount} onChange={e => setForm(f => ({ ...f, package_amount: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="500" className="h-9" /></div>
+                <div><Label className="text-xs">Packung Bezeichnung</Label><Input value={form.package_label} onChange={e => setForm(f => ({ ...f, package_label: e.target.value }))} placeholder="500g" className="h-9" /></div>
+              </div>
+            </details>
+            <div className="flex gap-2">
+              <Button type="submit" className="min-h-[44px]">{editing ? 'Speichern' : 'Hinzufügen'}</Button>
+              {editing && <Button type="button" variant="outline" onClick={resetIngredientForm}>Abbrechen</Button>}
+            </div>
+          </form>
+        </details>
+
+        {/* Layers and ingredients grouped */}
+        <div className="space-y-6 border-t border-border pt-4">
+          {sortedLayers.map(layer => {
+            const ings = getIngredientsByLayer(layer.id)
             return (
-              <li key={i.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <span className="text-foreground flex items-center gap-2">
-                  {i.icon_url && <img src={i.icon_url} alt="" className="h-6 w-6 object-contain rounded" />}
-                  <strong>{i.name}</strong> ({layerName})
-                  {(i.allow_delete || i.allow_add_more) && <span className="text-muted-foreground text-xs">Entfernen: {i.allow_delete ? 'ja' : 'nein'}, Mehr: {i.allow_add_more ? 'ja' : 'nein'}</span>}
-                  {i.max_quantity != null && <span className="text-muted-foreground text-xs"> · Max: {i.max_quantity}</span>}
-                  {i.portion_amount != null && <small className="text-muted-foreground">{i.portion_amount}{i.portion_unit} → {i.package_amount}{i.package_unit ?? ''} {i.package_label}</small>}</span>
-                <span className="flex gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => startEdit(i)}>Bearbeiten</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => remove(i.id)}>Löschen</Button>
-                </span>
-              </li>
+              <section key={layer.id} className="rounded-lg border border-border p-4 space-y-3">
+                <div
+                  className={cn('flex items-center justify-between flex-wrap gap-2 rounded-md p-2 -m-2 transition-colors', dragOverLayerId === layer.id && 'bg-primary/10 ring-2 ring-primary/30')}
+                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverId(null); setDragOverLayerId(layer.id) }}
+                  onDragLeave={() => setDragOverLayerId(null)}
+                  onDrop={e => {
+                    e.preventDefault()
+                    setDragOverLayerId(null)
+                    const id = e.dataTransfer.getData('text/plain')
+                    if (id) handleDropOnLayer(id, layer.id)
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    {layer.icon_url && <img src={layer.icon_url} alt="" className="h-6 w-6 object-contain rounded" />}
+                    <strong className="text-foreground">{layer.name}</strong>
+                    <span className="text-muted-foreground text-sm">(Reihe {layer.sort_order}, {SELECTION_OPTIONS.find(o => o.value === layer.selection_type)?.label ?? layer.selection_type})</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => startEditLayer(layer)}>Ebene bearbeiten</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => removeLayer(layer.id)}>Ebene löschen</Button>
+                    <Button type="button" size="sm" onClick={() => startAddForLayer(layer.id)}>Zutat hinzufügen</Button>
+                  </div>
+                </div>
+                <ul className="list-none p-0 m-0 space-y-1">
+                  {ings.map((ing, idx) => (
+                    <li
+                      key={ing.id}
+                      draggable
+                      data-ingredient-id={ing.id}
+                      data-layer-id={layer.id}
+                      className={cn(
+                        'flex items-center gap-2 py-2 px-2 rounded-md cursor-grab active:cursor-grabbing',
+                        editing?.id === ing.id && 'bg-primary/10',
+                        dragOverId === ing.id && 'ring-2 ring-primary bg-primary/5',
+                        draggingId === ing.id && 'opacity-60'
+                      )}
+                      onDragStart={e => {
+                        e.dataTransfer.setData('text/plain', ing.id)
+                        e.dataTransfer.effectAllowed = 'move'
+                        setDraggingId(ing.id)
+                      }}
+                      onDragEnd={() => setDraggingId(null)}
+                      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverId(ing.id) }}
+                      onDragLeave={() => setDragOverId(null)}
+                      onDrop={e => {
+                        e.preventDefault()
+                        setDragOverId(null)
+                        const id = e.dataTransfer.getData('text/plain')
+                        if (id && id !== ing.id) handleIngredientDrop(id, ing.id, layer.id)
+                      }}
+                    >
+                      <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                      {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain rounded shrink-0" />}
+                      <span className="font-medium min-w-0 truncate">{ing.name}</span>
+                      <div className="flex gap-1 ml-auto shrink-0">
+                        <Button type="button" variant="outline" size="sm" onClick={() => startEditIngredient(ing)}>Bearbeiten</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => removeIngredient(ing.id)}>Löschen</Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {ings.length === 0 && (
+                  <p className="text-muted-foreground text-sm">Noch keine Zutaten. „Zutat hinzufügen“ klicken.</p>
+                )}
+              </section>
             )
           })}
-        </ul>
+        </div>
+
+        {!editingLayer && !addingLayer && (
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={startAddLayer}>
+            Ebene hinzufügen
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

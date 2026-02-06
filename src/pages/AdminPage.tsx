@@ -10,14 +10,13 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu'
-import LayersTab from '@/components/admin/LayersTab'
 import IngredientsTab from '@/components/admin/IngredientsTab'
 import OrdersTab from '@/components/admin/OrdersTab'
 import SettingsTab from '@/components/admin/SettingsTab'
 import OrderSlipsTab from '@/components/admin/OrderSlipsTab'
 import ShoppingListTab from '@/components/admin/ShoppingListTab'
 
-type AdminSection = 'layers' | 'ingredients' | 'orders' | 'settings' | 'slips' | 'shopping'
+type AdminSection = 'ingredients' | 'orders' | 'settings' | 'slips' | 'shopping'
 
 const ADMIN_STORAGE = 'bowl_admin_ok'
 
@@ -63,8 +62,7 @@ function AdminGate({ children }: { children: React.ReactNode }) {
 }
 
 const sections: { id: AdminSection; label: string }[] = [
-  { id: 'layers', label: 'Ebenen' },
-  { id: 'ingredients', label: 'Zutaten' },
+  { id: 'ingredients', label: 'Ebenen & Zutaten' },
   { id: 'orders', label: 'Bestellübersicht' },
   { id: 'settings', label: 'Einstellungen' },
   { id: 'slips', label: 'Bestellzettel' },
@@ -79,7 +77,7 @@ export default function AdminPage() {
       <div>
         <h1 className="mt-0 mb-4 text-2xl font-semibold">Admin</h1>
         <NavigationMenu viewport={false} className="print:hidden w-full">
-          <NavigationMenuList className="mb-4 grid w-full grid-cols-1 gap-1 rounded-lg bg-muted p-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-h-[44px]">
+          <NavigationMenuList className="mb-4 grid w-full grid-cols-1 gap-1 rounded-lg bg-muted p-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 [&>*]:min-h-[44px]">
             {sections.map(({ id, label }) => (
               <NavigationMenuItem key={id}>
                 <NavigationMenuLink asChild>
@@ -97,7 +95,6 @@ export default function AdminPage() {
           </NavigationMenuList>
         </NavigationMenu>
         <div className="mt-0">
-          {active === 'layers' && <LayersTab />}
           {active === 'ingredients' && <IngredientsTab />}
           {active === 'orders' && <OrdersTab />}
           {active === 'settings' && <SettingsTab />}
