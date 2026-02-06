@@ -1,4 +1,4 @@
-export type SelectionType = 'none' | 'single' | 'multiple' | 'quantity'
+export type SelectionType = 'none' | 'single' | 'multiple' | 'quantity' | 'display_only'
 
 export interface Layer {
   id: string
@@ -30,6 +30,8 @@ export interface Order {
   id: string
   customer_id: string
   delivery_date: string
+  room?: string | null
+  allergies?: string | null
   created_at: string
 }
 

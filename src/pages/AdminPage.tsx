@@ -78,14 +78,14 @@ export default function AdminPage() {
     <AdminGate>
       <div>
         <h1 className="mt-0 mb-4 text-2xl font-semibold">Admin</h1>
-        <NavigationMenu viewport={false} className="print:hidden">
-          <NavigationMenuList className="flex flex-nowrap h-auto gap-1 mb-4 p-1 bg-muted rounded-lg overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:[display:none] [&>*]:shrink-0 min-h-[44px]">
+        <NavigationMenu viewport={false} className="print:hidden w-full">
+          <NavigationMenuList className="mb-4 grid w-full grid-cols-1 gap-1 rounded-lg bg-muted p-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-h-[44px]">
             {sections.map(({ id, label }) => (
               <NavigationMenuItem key={id}>
                 <NavigationMenuLink asChild>
                   <button
                     type="button"
-                    className={navigationMenuTriggerStyle() + ' min-h-[44px] data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm data-[active=true]:hover:bg-primary-hover data-[active=true]:hover:text-primary-foreground data-[active=true]:focus:bg-primary data-[active=true]:focus:text-primary-foreground'}
+                    className={navigationMenuTriggerStyle() + ' min-h-[44px] w-full justify-center data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm data-[active=true]:hover:bg-primary-hover data-[active=true]:hover:text-primary-foreground data-[active=true]:focus:bg-primary data-[active=true]:focus:text-primary-foreground'}
                     data-active={active === id}
                     onClick={() => setActive(id)}
                   >

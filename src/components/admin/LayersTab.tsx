@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 
 const SELECTION_OPTIONS = [
   { value: 'none', label: 'Keine' },
+  { value: 'display_only', label: 'Nur Anzeige (feste Basis)' },
   { value: 'single', label: 'Normal (einfach)' },
   { value: 'multiple', label: 'Normal: mehr' },
   { value: 'quantity', label: 'Menge (1,2,3 …)' },

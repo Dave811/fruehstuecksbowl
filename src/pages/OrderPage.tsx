@@ -135,7 +135,7 @@ export default function OrderPage() {
             }}
           />
         </div>
-        <OrderForm customerId={customer.id} deliveryDate={deliveryDate} onSaved={() => {}} />
+        <OrderForm customerId={customer.id} customerName={customer.name} deliveryDate={deliveryDate} onSaved={() => {}} />
         <MyOrder customerId={customer.id} deliveryDate={deliveryDate} />
       </div>
     )

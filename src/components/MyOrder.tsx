@@ -55,6 +55,13 @@ export default function MyOrder({ customerId, deliveryDate }: MyOrderProps) {
       <CardHeader className="pb-2">
         <CardTitle>Meine Bestellung</CardTitle>
         <p className="text-muted-foreground text-sm">{formatDate(deliveryDate)}</p>
+        {(order.room || order.allergies) && (
+          <p className="text-muted-foreground text-sm mt-1">
+            {order.room && <span>Raum: {order.room}</span>}
+            {order.room && order.allergies && ' · '}
+            {order.allergies && <span>Allergien: {order.allergies}</span>}
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <ul className="list-none p-0 m-0 space-y-2">
