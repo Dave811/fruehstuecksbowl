@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 import { GripVertical } from 'lucide-react'
 import { Sketch } from '@uiw/react-color'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import type { DropResult } from '@hello-pangea/dnd'
 
 const SELECTION_OPTIONS = [
   { value: 'none', label: 'Keine' },
@@ -69,10 +71,6 @@ export default function IngredientsTab() {
   const [editingLayer, setEditingLayer] = useState<Partial<Layer> | null>(null)
   const [addingLayer, setAddingLayer] = useState(false)
   const [layerForm, setLayerForm] = useState(emptyLayerForm)
-  const [dragOverId, setDragOverId] = useState<string | null>(null)
-  const [dragOverLayerId, setDragOverLayerId] = useState<string | null>(null)
-  const [draggingId, setDraggingId] = useState<string | null>(null)
-  const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -137,26 +135,6 @@ export default function IngredientsTab() {
     load()
   }
 
-  async function handleIngredientDrop(draggedId: string, targetIngId: string, targetLayerId: string) {
-    const dragged = ingredients.find(i => i.id === draggedId)
-    if (!dragged) return
-    if (dragged.layer_id === targetLayerId) {
-      const list = getIngredientsByLayer(targetLayerId)
-      const fromIdx = list.findIndex(i => i.id === draggedId)
-      const toIdx = list.findIndex(i => i.id === targetIngId)
-      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return
-      const reordered = list.filter(i => i.id !== draggedId)
-      reordered.splice(toIdx, 0, dragged)
-      for (let i = 0; i < reordered.length; i++) {
-        await supabase.from('ingredients').update({ sort_order: i }).eq('id', reordered[i].id)
-      }
-    } else {
-      const newOrder = getNextSortOrderForLayer(targetLayerId)
-      await supabase.from('ingredients').update({ layer_id: targetLayerId, sort_order: newOrder }).eq('id', draggedId)
-    }
-    load()
-  }
-
   async function reorderLayers(draggedLayerId: string, targetLayerId: string) {
     if (draggedLayerId === targetLayerId) return
     const sorted = [...layers].sort((a, b) => a.sort_order - b.sort_order)
@@ -169,6 +147,52 @@ export default function IngredientsTab() {
       await supabase.from('layers').update({ sort_order: i }).eq('id', reordered[i].id)
     }
     load()
+  }
+
+  async function onDragEnd(result: DropResult) {
+    const { source, destination, draggableId } = result
+    if (!destination) return
+
+    if (source.droppableId === 'layers' && destination.droppableId === 'layers') {
+      const layerId = draggableId.startsWith('layer-') ? draggableId.slice(6) : draggableId
+      const sorted = [...layers].sort((a, b) => a.sort_order - b.sort_order)
+      const fromIdx = sorted.findIndex(l => l.id === layerId)
+      const toIdx = destination.index
+      if (fromIdx < 0 || fromIdx === toIdx) return
+      const reordered = sorted.filter(l => l.id !== layerId)
+      reordered.splice(toIdx, 0, sorted[fromIdx])
+      const withNewOrder = reordered.map((l, i) => ({ ...l, sort_order: i }))
+      setLayers(withNewOrder)
+      for (let i = 0; i < reordered.length; i++) {
+        await supabase.from('layers').update({ sort_order: i }).eq('id', reordered[i].id)
+      }
+      load()
+      return
+    }
+
+    if (source.droppableId.startsWith('ing-') && destination.droppableId.startsWith('ing-')) {
+      const sourceLayerId = source.droppableId.replace(/^ing-/, '')
+      const destLayerId = destination.droppableId.replace(/^ing-/, '')
+      const listSource = getIngredientsByLayer(sourceLayerId)
+      const listDest = getIngredientsByLayer(destLayerId)
+      const dragged = listSource[source.index]
+      if (!dragged) return
+      if (sourceLayerId === destLayerId) {
+        const reordered = Array.from(listSource)
+        const [removed] = reordered.splice(source.index, 1)
+        reordered.splice(destination.index, 0, removed)
+        for (let i = 0; i < reordered.length; i++) {
+          await supabase.from('ingredients').update({ sort_order: i }).eq('id', reordered[i].id)
+        }
+      } else {
+        const newOrder = [...listDest]
+        newOrder.splice(destination.index, 0, dragged)
+        for (let i = 0; i < newOrder.length; i++) {
+          await supabase.from('ingredients').update({ layer_id: destLayerId, sort_order: i }).eq('id', newOrder[i].id)
+        }
+      }
+      load()
+    }
   }
 
   function startEditIngredient(i: Ingredient) {
@@ -406,109 +430,91 @@ export default function IngredientsTab() {
         </details>
 
         {/* Layers and ingredients grouped */}
-        <div className="space-y-6 border-t border-border pt-4">
-          {sortedLayers.map(layer => {
-            const ings = getIngredientsByLayer(layer.id)
-            return (
-              <section key={layer.id} className={cn('rounded-lg border border-border p-4 space-y-3 transition-opacity', draggingLayerId === layer.id && 'opacity-60')}>
-                <div
-                  className={cn('flex items-center justify-between flex-wrap gap-2 rounded-md p-2 -m-2 transition-colors', dragOverLayerId === layer.id && 'bg-primary/10 ring-2 ring-primary/30')}
-                  onDragOver={e => {
-                    const isLayerDrag = e.dataTransfer.types.includes('application/x-layer-id')
-                    if (!isLayerDrag) {
-                      setDragOverLayerId(null)
-                      return
-                    }
-                    e.preventDefault()
-                    e.dataTransfer.dropEffect = 'move'
-                    setDragOverId(null)
-                    if (draggingLayerId === layer.id) return
-                    setDragOverLayerId(layer.id)
-                  }}
-                  onDragLeave={() => setDragOverLayerId(null)}
-                  onDrop={e => {
-                    if (!e.dataTransfer.types.includes('application/x-layer-id')) return
-                    e.preventDefault()
-                    setDragOverLayerId(null)
-                    const layerId = e.dataTransfer.getData('application/x-layer-id')
-                    if (layerId) reorderLayers(layerId, layer.id)
-                  }}
-                >
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div
-                      draggable
-                      onDragStart={e => {
-                        e.dataTransfer.setData('application/x-layer-id', layer.id)
-                        e.dataTransfer.effectAllowed = 'move'
-                        setDraggingLayerId(layer.id)
-                        setDragOverId(null)
-                      }}
-                      onDragEnd={() => setDraggingLayerId(null)}
-                      className="cursor-grab active:cursor-grabbing touch-none"
-                      title="Ebene verschieben"
-                    >
-                      <GripVertical className="h-5 w-5 text-muted-foreground" aria-hidden />
-                    </div>
-                    {layer.icon_url && <img src={layer.icon_url} alt="" className="h-6 w-6 object-contain rounded" />}
-                    <strong className="text-foreground">{layer.name}</strong>
-                    <span className="text-muted-foreground text-sm">(Reihe {layer.sort_order}, {SELECTION_OPTIONS.find(o => o.value === layer.selection_type)?.label ?? layer.selection_type})</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => startEditLayer(layer)}>Ebene bearbeiten</Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => removeLayer(layer.id)}>Ebene löschen</Button>
-                    <Button type="button" size="sm" onClick={() => startAddForLayer(layer.id)}>Zutat hinzufügen</Button>
-                  </div>
-                </div>
-                <ul className="list-none p-0 m-0 space-y-1">
-                  {ings.map((ing) => (
-                    <li
-                      key={ing.id}
-                      draggable
-                      data-ingredient-id={ing.id}
-                      data-layer-id={layer.id}
-                      className={cn(
-                        'flex items-center gap-2 py-2 px-2 rounded-md cursor-grab active:cursor-grabbing',
-                        editing?.id === ing.id && 'bg-primary/10',
-                        dragOverId === ing.id && 'ring-2 ring-primary bg-primary/5',
-                        draggingId === ing.id && 'opacity-60'
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="layers" type="layer">
+            {(layersProvided) => (
+              <div
+                ref={layersProvided.innerRef}
+                {...layersProvided.droppableProps}
+                className="space-y-6 border-t border-border pt-4"
+              >
+                {sortedLayers.map((layer, layerIndex) => {
+                  const ings = getIngredientsByLayer(layer.id)
+                  return (
+                    <Draggable key={layer.id} draggableId={`layer-${layer.id}`} index={layerIndex}>
+                      {(layerProvided, layerSnapshot) => (
+                        <section
+                          ref={layerProvided.innerRef}
+                          {...layerProvided.draggableProps}
+                          className={cn(
+                            'rounded-lg border border-border p-4 space-y-3 transition-opacity min-h-[4rem]',
+                            layerSnapshot.isDragging && 'opacity-60 shadow-md'
+                          )}
+                        >
+                          <div className="flex items-center justify-between flex-wrap gap-2 rounded-md p-2 -m-2">
+                            <div className="flex items-center gap-2 shrink-0" {...layerProvided.dragHandleProps}>
+                              <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" aria-hidden />
+                              {layer.icon_url && <img src={layer.icon_url} alt="" className="h-6 w-6 object-contain rounded" />}
+                              <strong className="text-foreground">{layer.name}</strong>
+                              <span className="text-muted-foreground text-sm">(Reihe {layer.sort_order}, {SELECTION_OPTIONS.find(o => o.value === layer.selection_type)?.label ?? layer.selection_type})</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button type="button" variant="outline" size="sm" onClick={() => startEditLayer(layer)}>Ebene bearbeiten</Button>
+                              <Button type="button" variant="outline" size="sm" onClick={() => removeLayer(layer.id)}>Ebene löschen</Button>
+                              <Button type="button" size="sm" onClick={() => startAddForLayer(layer.id)}>Zutat hinzufügen</Button>
+                            </div>
+                          </div>
+                          <Droppable droppableId={`ing-${layer.id}`} type="ingredient">
+                            {(ingProvided, ingSnapshot) => (
+                              <ul
+                                ref={ingProvided.innerRef}
+                                {...ingProvided.droppableProps}
+                                className={cn(
+                                  'list-none p-0 m-0 space-y-1 min-h-[8px] rounded-md transition-colors',
+                                  ingSnapshot.isDraggingOver && 'bg-primary/5'
+                                )}
+                              >
+                                {ings.map((ing, ingIndex) => (
+                                  <Draggable key={ing.id} draggableId={ing.id} index={ingIndex}>
+                                    {(ingProvided, ingSnapshot) => (
+                                      <li
+                                        ref={ingProvided.innerRef}
+                                        {...ingProvided.draggableProps}
+                                        {...ingProvided.dragHandleProps}
+                                        className={cn(
+                                          'flex items-center gap-2 py-2 px-2 rounded-md cursor-grab active:cursor-grabbing',
+                                          editing?.id === ing.id && 'bg-primary/10',
+                                          ingSnapshot.isDragging && 'opacity-60 shadow-sm'
+                                        )}
+                                      >
+                                        <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                                        {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain rounded shrink-0" />}
+                                        <span className="font-medium min-w-0 truncate">{ing.name}</span>
+                                        <div className="flex gap-1 ml-auto shrink-0">
+                                          <Button type="button" variant="outline" size="sm" onClick={() => startEditIngredient(ing)}>Bearbeiten</Button>
+                                          <Button type="button" variant="outline" size="sm" onClick={() => removeIngredient(ing.id)}>Löschen</Button>
+                                        </div>
+                                      </li>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {ingProvided.placeholder}
+                              </ul>
+                            )}
+                          </Droppable>
+                          {ings.length === 0 && (
+                            <p className="text-muted-foreground text-sm">Noch keine Zutaten. „Zutat hinzufügen“ klicken.</p>
+                          )}
+                        </section>
                       )}
-                      onDragStart={e => {
-                        e.dataTransfer.setData('text/plain', ing.id)
-                        e.dataTransfer.effectAllowed = 'move'
-                        setDraggingId(ing.id)
-                      }}
-                      onDragEnd={() => setDraggingId(null)}
-                      onDragOver={e => {
-                        if (e.dataTransfer.types.includes('application/x-layer-id')) return
-                        e.preventDefault()
-                        e.dataTransfer.dropEffect = 'move'
-                        setDragOverId(ing.id)
-                      }}
-                      onDragLeave={() => setDragOverId(null)}
-                      onDrop={e => {
-                        e.preventDefault()
-                        setDragOverId(null)
-                        const id = e.dataTransfer.getData('text/plain')
-                        if (id && id !== ing.id) handleIngredientDrop(id, ing.id, layer.id)
-                      }}
-                    >
-                      <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-                      {ing.icon_url && <img src={ing.icon_url} alt="" className="h-5 w-5 object-contain rounded shrink-0" />}
-                      <span className="font-medium min-w-0 truncate">{ing.name}</span>
-                      <div className="flex gap-1 ml-auto shrink-0">
-                        <Button type="button" variant="outline" size="sm" onClick={() => startEditIngredient(ing)}>Bearbeiten</Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => removeIngredient(ing.id)}>Löschen</Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                {ings.length === 0 && (
-                  <p className="text-muted-foreground text-sm">Noch keine Zutaten. „Zutat hinzufügen“ klicken.</p>
-                )}
-              </section>
-            )
-          })}
-        </div>
+                    </Draggable>
+                  )
+                })}
+                {layersProvided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
 
         {!editingLayer && !addingLayer && (
           <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={startAddLayer}>
