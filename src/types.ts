@@ -7,6 +7,7 @@ export interface Layer {
   selection_type: SelectionType
   quantity_options: string | null
   icon_url?: string | null
+  is_available?: boolean
 }
 
 export interface Ingredient {
@@ -24,6 +25,7 @@ export interface Ingredient {
   allow_add_more?: boolean
   max_quantity?: number | null
   default_quantity?: number | null
+  is_available?: boolean
 }
 
 export interface Customer {

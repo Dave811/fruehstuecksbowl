@@ -165,9 +165,9 @@ export default function OrderSlipsTab() {
   if (loading) return <p className="text-muted-foreground">Lade …</p>
 
   return (
-    <Card className="mb-4">
-      <CardHeader>
-        <CardTitle>Bestellübersicht (PDF/Druck)</CardTitle>
+    <Card className="mb-4 w-full max-w-full min-w-0 overflow-hidden">
+      <CardHeader className="min-w-0">
+        <CardTitle className="truncate">Bestellübersicht (PDF/Druck)</CardTitle>
         <p className="text-muted-foreground text-sm font-normal">Sortierung nach Raum/Klasse. „PDF erstellen“: Querformat, 3 Zettel pro Seite, Umrandung und gestrichelte Schneidelinien. „Drucken“: Browser-Druck (Strg+P).</p>
         <div className="space-y-2 print:hidden">
           <Label>Lieferdatum</Label>

@@ -109,9 +109,9 @@ export default function ShoppingListTab() {
   if (loading) return <p className="text-muted-foreground">Lade …</p>
 
   return (
-    <Card className="mb-4">
-      <CardHeader>
-        <CardTitle>Einkaufsliste</CardTitle>
+    <Card className="mb-4 w-full max-w-full min-w-0 overflow-hidden">
+      <CardHeader className="min-w-0">
+        <CardTitle className="truncate">Einkaufsliste</CardTitle>
         <p className="text-muted-foreground text-sm font-normal">Für den gewählten Liefertermin. PDF: normales A4 mit Abkreuzliste. Drucken: Browser (Strg+P).</p>
         <div className="space-y-2 print:hidden">
           <Label>Lieferdatum</Label>

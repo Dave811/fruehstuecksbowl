@@ -74,9 +74,9 @@ export default function AdminPage() {
 
   return (
     <AdminGate>
-      <div>
-        <h1 className="mt-0 mb-4 text-2xl font-semibold">Admin</h1>
-        <NavigationMenu viewport={false} className="print:hidden w-full">
+      <div className="w-full max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 overflow-x-hidden">
+        <h1 className="mt-0 mb-4 text-2xl font-semibold truncate">Admin</h1>
+        <NavigationMenu viewport={false} className="print:hidden w-full max-w-full">
           <NavigationMenuList className="mb-4 grid w-full grid-cols-1 gap-1 rounded-lg bg-muted p-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 [&>*]:min-h-[44px]">
             {sections.map(({ id, label }) => (
               <NavigationMenuItem key={id}>
@@ -94,7 +94,7 @@ export default function AdminPage() {
             ))}
           </NavigationMenuList>
         </NavigationMenu>
-        <div className="mt-0">
+        <div className="mt-0 min-w-0">
           {active === 'ingredients' && <IngredientsTab />}
           {active === 'orders' && <OrdersTab />}
           {active === 'settings' && <SettingsTab />}

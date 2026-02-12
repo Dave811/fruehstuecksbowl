@@ -73,9 +73,9 @@ export default function OrdersTab() {
   }, [filteredOrders])
 
   return (
-    <Card className="mb-4">
-      <CardHeader>
-        <CardTitle>Bestellübersicht</CardTitle>
+    <Card className="mb-4 w-full max-w-full min-w-0 overflow-hidden">
+      <CardHeader className="min-w-0">
+        <CardTitle className="truncate">Bestellübersicht</CardTitle>
         <p className="text-muted-foreground text-sm font-normal">Alle Bestellungen, sortiert nach Datum und Raum. Filter optional.</p>
       </CardHeader>
       <CardContent className="space-y-4">

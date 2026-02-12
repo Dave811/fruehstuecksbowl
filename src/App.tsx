@@ -36,10 +36,10 @@ export default function App() {
           </Button>
         </nav>
       </header>
-      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-6 max-w-[600px] w-full mx-auto print:max-w-none print:p-0 bg-background">
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-6 w-full mx-auto print:max-w-none print:p-0 bg-background">
         <Suspense fallback={<p className="text-muted-foreground">Lade …</p>}>
           <Routes>
-            <Route path="/" element={<OrderPage />} />
+            <Route path="/" element={<div className="max-w-[600px] mx-auto w-full"><OrderPage /></div>} />
             <Route path="/admin/*" element={<AdminPage />} />
           </Routes>
         </Suspense>

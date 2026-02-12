@@ -73,9 +73,10 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
       }
       function buildDefaultSelection(): SelectionState {
         const sel: SelectionState = {}
-        for (const layer of layers) {
+        const available = layers.filter(l => l.is_available !== false)
+        for (const layer of available) {
           if (layer.selection_type !== 'multiple' && layer.selection_type !== 'quantity') continue
-          const ings = ingredients.filter(i => i.layer_id === layer.id)
+          const ings = ingredients.filter(i => i.layer_id === layer.id && i.is_available !== false)
           const arr: string[] = []
           for (const ing of ings) {
             const q = Math.max(0, ing.default_quantity ?? 0)
@@ -114,9 +115,10 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
   }, [customerId, deliveryDate, ingredients, layers])
 
   const closed = isOrderClosedForDelivery(deliveryDate, cutoff.weekday, cutoff.hour, cutoff.minute)
-  const layersSelectable = layers.filter(l => l.selection_type !== 'none' && l.selection_type !== 'display_only')
-  const layersForDisplay = layers.filter(l => l.selection_type !== 'none')
-  const getIngredientsForLayer = (layerId: string) => ingredients.filter(i => i.layer_id === layerId)
+  const availableLayers = layers.filter(l => l.is_available !== false)
+  const layersSelectable = availableLayers.filter(l => l.selection_type !== 'none' && l.selection_type !== 'display_only')
+  const layersForDisplay = availableLayers.filter(l => l.selection_type !== 'none')
+  const getIngredientsForLayer = (layerId: string) => ingredients.filter(i => i.layer_id === layerId && i.is_available !== false)
 
   function setLayerSelection(layerId: string, type: string, value: string | { op: 'add' | 'removeOne' | 'removeAll'; ingId: string }) {
     if (type === 'single') {

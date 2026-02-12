@@ -75,9 +75,9 @@ export default function SettingsTab() {
   if (loading) return <p className="text-muted-foreground">Lade …</p>
 
   return (
-    <Card className="mb-4">
-      <CardHeader>
-        <CardTitle>Einstellungen</CardTitle>
+    <Card className="mb-4 w-full max-w-full min-w-0 overflow-hidden">
+      <CardHeader className="min-w-0">
+        <CardTitle className="truncate">Einstellungen</CardTitle>
         <p className="text-muted-foreground text-sm font-normal">
           Liefertag und Bestellschluss festlegen. Pausierte Daten: an diesen Tagen findet keine Lieferung statt (z. B. Feiertage).
         </p>
