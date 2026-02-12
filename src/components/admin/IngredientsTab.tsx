@@ -328,7 +328,7 @@ export default function IngredientsTab() {
         )}
 
         {/* Ingredient add/edit form */}
-        <details open={!!editing || (!!form.name && !!form.layer_id)} className="space-y-3">
+        <details open={!!editing || !!form.layer_id} className="space-y-3">
           <summary className="cursor-pointer font-medium">
             {editing ? 'Zutat bearbeiten' : 'Zutat hinzufügen'}
           </summary>
