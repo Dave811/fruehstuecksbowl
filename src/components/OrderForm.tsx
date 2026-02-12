@@ -56,7 +56,7 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
   }, [])
 
   useEffect(() => {
-    if (!customerId || !deliveryDate || ingredients.length === 0) return
+    if (!customerId || !deliveryDate || ingredients.length === 0 || layers.length === 0) return
     async function loadOrder() {
       const { data: order } = await supabase
         .from('orders')
@@ -71,9 +71,30 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
         setRoom('')
         setAllergies('')
       }
-      if (!order) return
+      function buildDefaultSelection(): SelectionState {
+        const sel: SelectionState = {}
+        for (const layer of layers) {
+          if (layer.selection_type !== 'multiple' && layer.selection_type !== 'quantity') continue
+          const ings = ingredients.filter(i => i.layer_id === layer.id)
+          const arr: string[] = []
+          for (const ing of ings) {
+            const q = Math.max(0, ing.default_quantity ?? 0)
+            const maxQ = ing.max_quantity ?? 999
+            for (let i = 0; i < Math.min(q, maxQ); i++) arr.push(ing.id)
+          }
+          if (arr.length) sel[layer.id] = arr
+        }
+        return sel
+      }
+      if (!order) {
+        setSelection(s => ({ ...s, ...buildDefaultSelection() }))
+        return
+      }
       const { data: items } = await supabase.from('order_items').select('ingredient_id, quantity').eq('order_id', (order as { id: string }).id)
-      if (!items?.length) return
+      if (!items?.length) {
+        setSelection(s => ({ ...s, ...buildDefaultSelection() }))
+        return
+      }
       const sel: SelectionState = {}
       for (const it of items as { ingredient_id: string; quantity: number }[]) {
         const ing = ingredients.find(i => i.id === it.ingredient_id)
@@ -90,7 +111,7 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
       setSelection(s => ({ ...s, ...sel }))
     }
     loadOrder()
-  }, [customerId, deliveryDate, ingredients.length, layers.length])
+  }, [customerId, deliveryDate, ingredients, layers])
 
   const closed = isOrderClosedForDelivery(deliveryDate, cutoff.weekday, cutoff.hour, cutoff.minute)
   const layersSelectable = layers.filter(l => l.selection_type !== 'none' && l.selection_type !== 'display_only')
@@ -297,7 +318,7 @@ export default function OrderForm({ customerId, customerName, deliveryDate, onSa
                 <div key={layer.id} className="space-y-2">
                   <Label className="text-foreground font-medium flex items-center gap-2">
                     {layer.icon_url && <img src={layer.icon_url} alt="" className="h-5 w-5 object-contain" />}
-                    Feste Basis (nicht veränderbar)
+                    {layer.name} (nicht veränderbar)
                   </Label>
                   <p className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-foreground min-h-[44px] flex items-center gap-2 flex-wrap">
                     {ings.map(i => (

@@ -52,6 +52,7 @@ const emptyIngredientForm = {
   allow_delete: false,
   allow_add_more: false,
   max_quantity: '' as number | '',
+  default_quantity: '' as number | '',
 }
 
 const emptyLayerForm = {
@@ -117,6 +118,7 @@ export default function IngredientsTab() {
       allow_delete: form.allow_delete,
       allow_add_more: form.allow_add_more,
       max_quantity: form.max_quantity === '' ? null : (Number(form.max_quantity) || null),
+      default_quantity: form.default_quantity === '' ? 0 : Math.max(0, Number(form.default_quantity) || 0),
     }
     if (editing?.id) {
       await supabase.from('ingredients').update(payload).eq('id', editing.id)
@@ -196,6 +198,7 @@ export default function IngredientsTab() {
       allow_delete: i.allow_delete ?? false,
       allow_add_more: i.allow_add_more ?? false,
       max_quantity: i.max_quantity ?? '',
+      default_quantity: (i as { default_quantity?: number | null }).default_quantity ?? '',
     })
   }
 
@@ -397,6 +400,11 @@ export default function IngredientsTab() {
               <div className="flex items-center gap-2">
                 <Label className="mb-0 text-sm">Max. Anzahl</Label>
                 <Input type="number" min={1} className="h-9 w-20" value={form.max_quantity} onChange={e => setForm(f => ({ ...f, max_quantity: e.target.value === '' ? '' : Number(e.target.value) }))} placeholder="—" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs whitespace-nowrap">Vorauswahl</Label>
+                <Input type="number" min={0} className="h-9 w-20" value={form.default_quantity} onChange={e => setForm(f => ({ ...f, default_quantity: e.target.value === '' ? '' : Math.max(0, Number(e.target.value) || 0) }))} placeholder="0" />
+                <span className="text-xs text-muted-foreground">(nur Mehrfach-/Mengen-Ebenen)</span>
               </div>
             </div>
             <details className="text-sm">

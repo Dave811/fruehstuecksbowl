@@ -23,6 +23,7 @@ export interface Ingredient {
   allow_delete?: boolean
   allow_add_more?: boolean
   max_quantity?: number | null
+  default_quantity?: number | null
 }
 
 export interface Customer {
