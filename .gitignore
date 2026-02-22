@@ -23,3 +23,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase self-host: nur unsere Skripte/README tracken, Rest wird durch setup.ps1/setup.sh erzeugt
+supabase-selfhost/.env
+supabase-selfhost/supabase-temp/
+supabase-selfhost/volumes/
+supabase-selfhost/docker-compose.yml
+supabase-selfhost/docker-compose.s3.yml
+supabase-selfhost/utils/
+supabase-selfhost/dev/
+supabase-selfhost/reset.sh
+supabase-selfhost/CHANGELOG.md
+supabase-selfhost/versions.md
+supabase-selfhost/.env.example

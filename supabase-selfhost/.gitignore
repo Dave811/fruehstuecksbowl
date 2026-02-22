@@ -1,0 +1,12 @@
+# Nach setup.ps1/setup.sh nicht committen (wird durch Setup erzeugt)
+.env
+supabase-temp/
+volumes/
+docker-compose.yml
+docker-compose.s3.yml
+utils/
+dev/
+reset.sh
+CHANGELOG.md
+versions.md
+.env.example
