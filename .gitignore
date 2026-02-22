@@ -36,3 +36,6 @@ supabase-selfhost/reset.sh
 supabase-selfhost/CHANGELOG.md
 supabase-selfhost/versions.md
 supabase-selfhost/.env.example
+
+# DB-Dumps von Cloud-Migration (sensibel, nicht committen)
+migration-dumps/

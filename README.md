@@ -4,3 +4,4 @@ Deploy: `./deploy.sh` (benötigt `.env` mit `VITE_SUPABASE_URL`, `VITE_SUPABASE_
 
 - **Linux-Setup (vom Klonen bis deploy):** [docs/LINUX-SETUP.md](docs/LINUX-SETUP.md)
 - **Supabase selbst hosten:** [supabase-selfhost/README.md](supabase-selfhost/README.md)
+- **Migration Cloud → Self-Hosted (DB + Storage):** [docs/MIGRATE-TO-SELFHOSTED.md](docs/MIGRATE-TO-SELFHOSTED.md)
